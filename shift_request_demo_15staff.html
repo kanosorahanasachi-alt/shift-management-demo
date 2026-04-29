@@ -315,8 +315,8 @@
 
   <div class="card">
     <label for="empId">社員番号</label>
-    <input type="tel" id="empId" inputmode="numeric" pattern="[0-9]*" placeholder="例:1234" autocomplete="off">
-    <div class="note-small">数字のみ入力</div>
+    <input type="tel" id="empId" inputmode="numeric" pattern="[0-9]*" placeholder="例:1001" autocomplete="off">
+    <div class="note-small">デモ用サンプル社員番号：1001〜1010</div>
     <div id="existingNotice" class="existing-notice hidden">
       既に送信済みの内容があります。修正する場合は下の「既存データを読み込み」を押してください。
       <button class="btn btn-warning" id="loadExistingBtn" style="width:100%;margin-top:8px;">既存データを読み込み</button>
@@ -468,7 +468,7 @@
   <div class="modal">
     <h3>紙組代理入力</h3>
     <label>社員番号</label>
-    <input type="tel" id="paperEmpId" placeholder="例:1234">
+    <input type="tel" id="paperEmpId" placeholder="例:1001">
     <label>対象月</label>
     <input type="month" id="paperMonth">
     <label>休み希望日(カンマ区切り)</label>
@@ -516,7 +516,7 @@
   const LS_ROSTER   = 'shift_demo_roster_v1';
   const LS_PIN      = 'shift_demo_pin_v1';
   const LS_SEEDED   = 'shift_demo_seeded_v1';
-  const DEFAULT_PIN = '1234';
+  const DEFAULT_PIN = '9999';
 
   // ====== ストレージ操作（localStorage非対応環境フォールバック付き） ======
   const _store = (() => {
