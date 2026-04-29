@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>掲示・印刷用シフト表 | デモ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+
+    @page {
+      size: A3 landscape;
+      margin: 7mm;
+    }
+
+    /* ── スクリーン用ベース ── */
+    body {
+      margin: 0;
+      font-family: 'Noto Sans JP', "Yu Gothic", system-ui, sans-serif;
+      background: #f0f2f5;
+      color: #1a1e2e;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* ── ツールバー（印刷時非表示） ── */
+    .screen-toolbar {
+      padding: 10px 14px;
+      background: #fff;
+      border-bottom: 1px solid #d0d5e2;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      box-shadow: 0 1px 3px rgba(0,0,0,.05);
+    }
+
+    .toolbar-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: #e8f0fc; border: 1px solid #b0c8f0;
+      border-radius: 4px; padding: 3px 10px;
+      font-size: 10px; font-family: 'DM Mono', monospace;
+      color: #1a4d8f; letter-spacing: .08em; margin-right: 4px;
+    }
+    .toolbar-badge::before {
+      content: ''; width: 5px; height: 5px; border-radius: 50%;
+      background: #1a4d8f;
+    }
+
+    .screen-toolbar button {
+      border: 1px solid #b8bdd0;
+      background: #f4f6f9;
+      color: #4a5270;
+      padding: 7px 14px;
+      border-radius: 7px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 13px;
+      font-family: 'Noto Sans JP', sans-serif;
+      transition: all .15s;
+    }
+    .screen-toolbar button:hover {
+      border-color: #1a4d8f; color: #1a4d8f; background: #e8f0fc;
+    }
+    .screen-toolbar button.primary {
+      background: #1a4d8f; color: #fff; border-color: #1a4d8f;
+      box-shadow: 0 2px 6px rgba(26,77,143,.25);
+    }
+    .screen-toolbar button.primary:hover { background: #163f78; }
+
+    .toolbar-note {
+      font-size: 11px; color: #8a90a8;
+      font-family: 'DM Mono', monospace;
+    }
+
+    /* ── 印刷ページ ── */
+    .print-page {
+      width: 406mm;
+      min-height: 283mm;
+      padding: 3mm 4mm;
+      margin: 12px auto;
+      background: #fff;
+      box-shadow: 0 2px 16px rgba(0,0,0,.1);
+    }
+
+    table.print-sheet {
+      border-collapse: collapse;
+      table-layout: fixed;
+      width: 100%;
+      font-size: 8.8px;
+    }
+
+    .print-sheet th,
+    .print-sheet td {
+      border: 1px solid #444;
+      text-align: center;
+      vertical-align: middle;
+      padding: 1px;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    /* ── ヘッダー行 ── */
+    .store-cell {
+      text-align: left !important;
+      font-weight: 900;
+      font-size: 10px;
+      background: #f1f5fb;
+    }
+
+    .summary-label      { width: 16mm; font-weight: 900; background: #f4f6f9; text-align: left !important; padding-left: 2px !important; font-size: 8px; }
+    .summary-total-label{ width: 5mm;  font-weight: 900; background: #f4f6f9; font-size: 7px; }
+    .summary-total      { width: 11mm; font-weight: 900; background: #f4f6f9; font-family: 'DM Mono', monospace; font-size: 8px; }
+
+    .staff-name-col { width: 22mm; background: #fff; font-weight: 900; text-align: left !important; padding-left: 2px !important; }
+    .staff-info-col { width: 11mm; background: #f4f6f9; font-weight: 900; }
+
+    .day-col { width: calc((100% - 49mm) / 31); }
+
+    .week-start { border-left: 2.4px solid #000 !important; }
+
+    /* ── サマリー行の色分け ── */
+    .summary-shortage td { color: #b91c1c !important; }
+    .summary-surplus  td { color: #0f7a55 !important; }
+
+    /* ── 連絡事項行 ── */
+    .contact-row td {
+      height: 6.5mm;
+      background: #fefce8;
+      font-weight: 900;
+      font-size: 7.5px;
+      color: #78350f;
+    }
+
+    /* ── 日付ヘッダー ── */
+    .date-head {
+      height: 6.5mm;
+      background: #f1f5fb;
+      font-weight: 900;
+      font-size: 8px;
+      line-height: 1.1;
+    }
+    .sunday   { color: #b00020; background: #fff1f2 !important; }
+    .saturday { color: #1d4ed8; background: #eff6ff !important; }
+
+    /* ── スタッフ行 ── */
+    .staff-cell { height: 7mm; font-weight: 900; }
+    .staff-sub {
+      font-size: 6.5px; font-weight: 700;
+      display: flex; justify-content: space-between;
+      gap: 2px; margin-top: 1px;
+      color: #6b7280;
+    }
+
+    /* ── シフトセル ── */
+    .shift-cell { height: 7mm; font-weight: 900; }
+
+    .shift-early      { background: #dbeafe; color: #1e3a6e; }
+    .shift-middle     { background: #fef9c3; color: #713f12; }
+    .shift-late       { background: #fee2e2; color: #7f1d1d; }
+    .shift-changeover { background: #ffedd5; color: #7c2d12; }
+    .shift-off,
+    .shift-request-off,
+    .shift-paid       { background: #fff; color: #6b7280; }
+
+    .time-two-lines {
+      line-height: 1.0;
+      font-size: 7.8px;
+      font-weight: 900;
+    }
+
+    .circle-mark {
+      display: inline-flex;
+      align-items: center; justify-content: center;
+      width: 4.5mm; height: 4.5mm;
+      border: 1px solid #9ca3af;
+      border-radius: 50%;
+      font-weight: 900; font-size: 7.5px;
+      background: #fff; color: #6b7280;
+    }
+
+    /* ── 役割バッジ ── */
+    .role-SM { color: #6d28d9; font-weight: 900; }
+    .role-AM { color: #1d4ed8; font-weight: 900; }
+    .role-Cr { color: #0f7a55; font-weight: 900; }
+
+    /* ── 凡例 ── */
+    .legend {
+      margin-top: 2mm;
+      display: flex; gap: 4mm; flex-wrap: wrap;
+      font-size: 8px; font-weight: 900; color: #374151;
+    }
+    .legend-item { display: inline-flex; align-items: center; gap: 1mm; }
+    .legend-box  { width: 7mm; height: 4mm; border: 1px solid #9ca3af; border-radius: 2px; }
+
+    /* ── 印刷時 ── */
+    @media print {
+      .screen-toolbar { display: none; }
+      .print-page {
+        width: auto; min-height: auto;
+        margin: 0; padding: 0;
+        box-shadow: none;
+      }
+      body { background: #fff; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ツールバー -->
+  <div class="screen-toolbar">
+    <span class="toolbar-badge">PRINT PREVIEW / 掲示・印刷用デモ</span>
+    <button class="primary" onclick="window.print()">🖨 A3横で印刷</button>
+    <button onclick="location.reload()">↺ 再読み込み</button>
+    <span class="toolbar-note">※ 表示データはすべてサンプルです。実際の従業員・勤務情報は含まれていません。</span>
+  </div>
+
+  <!-- 印刷ページ -->
+  <div class="print-page">
+    <table class="print-sheet">
+      <tbody id="sheetBody"></tbody>
+    </table>
+    <div class="legend">
+      <span class="legend-item"><span class="legend-box shift-early"></span>早番 8:00-17:00</span>
+      <span class="legend-item"><span class="legend-box shift-middle"></span>中番 11:00-20:00</span>
+      <span class="legend-item"><span class="legend-box shift-late"></span>遅番 14:00-23:00</span>
+      <span class="legend-item"><span class="legend-box shift-changeover"></span>入替 20:00-29:00</span>
+      <span class="legend-item"><span class="circle-mark">公</span>公休</span>
+      <span class="legend-item"><span class="circle-mark">希</span>希望休</span>
+      <span class="legend-item"><span class="circle-mark">有</span>有休</span>
+      <span class="legend-item" style="margin-left:4mm;color:#8a90a8;">※ このデータはすべてサンプルです</span>
+    </div>
+  </div>
+
+<script>
+const days = Array.from({length:31}, (_,i) => i+1);
+
+const events = {
+  1:"ポケ", 8:"検査", 15:"入替", 22:"ファン感", 29:"店別"
+};
+
+// ── サマリー行（15名・20日勤務想定の現実的な数値） ──
+const summaryRows = [
+  { label:"出勤人数",  cls:"",               total:"317",     values:[10,9,11,12,11,9,11,12,10,13,10,9,11,12,10,11,12,10,13,11,10,12,11,9,10,11,12,13,10,11,9] },
+  { label:"必要人数",  cls:"",               total:"279",     values:[9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9] },
+  { label:"過不足",    cls:"summary-surplus", total:"+38",    values:["+1","0","+2","+3","+2","0","+2","+3","+1","+4","+1","0","+2","+3","+1","+2","+3","+1","+4","+2","+1","+3","+2","0","+1","+2","+3","+4","+1","+2","0"] },
+  { label:"早番人数",  cls:"",               total:"148",     values:[5,4,5,5,5,4,5,5,5,5,4,4,5,5,5,5,5,4,5,5,5,5,5,4,4,5,5,5,4,5,4] },
+  { label:"遅番人数",  cls:"",               total:"127",     values:[4,4,4,5,5,4,4,5,4,5,4,4,4,5,4,4,5,4,5,4,4,5,4,4,4,4,5,5,4,4,4] },
+  { label:"入替人数",  cls:"",               total:"14",      values:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0] },
+];
+
+// ── スタッフリスト（他2画面と統一） ──
+const staffList = [
+  {id:"1001", name:"山田 太郎",   role:"SM", workDays:18, offDays:13, hours:162},
+  {id:"1002", name:"佐藤 花子",   role:"SM", workDays:17, offDays:14, hours:153},
+  {id:"1003", name:"鈴木 一郎",   role:"AM", workDays:21, offDays:10, hours:189},
+  {id:"1004", name:"田中 美咲",   role:"AM", workDays:20, offDays:11, hours:180},
+  {id:"1005", name:"中村 健二",   role:"AM", workDays:20, offDays:11, hours:180},
+  {id:"1006", name:"小林さくら",  role:"AM", workDays:19, offDays:12, hours:171},
+  {id:"1007", name:"加藤 大輔",   role:"Cr", workDays:20, offDays:11, hours:180},
+  {id:"1008", name:"渡辺 陽子",   role:"Cr", workDays:19, offDays:12, hours:171},
+  {id:"1009", name:"伊藤 翔",     role:"Cr", workDays:20, offDays:11, hours:180},
+  {id:"1010", name:"山本 奈々",   role:"Cr", workDays:18, offDays:13, hours:162},
+  {id:"1011", name:"松田 健太",   role:"Cr", workDays:20, offDays:11, hours:180},
+  {id:"1012", name:"木村あかり",  role:"Cr", workDays:19, offDays:12, hours:171},
+  {id:"1013", name:"林 大地",     role:"Cr", workDays:20, offDays:11, hours:180},
+  {id:"1014", name:"清水 沙織",   role:"Cr", workDays:19, offDays:12, hours:171},
+  {id:"1015", name:"岡田 雄太",   role:"Cr", workDays:20, offDays:11, hours:180},
+];
+
+const shiftDefs = {
+  early:      {label:"早",  className:"shift-early",      start:"8:00",  end:"17:00"},
+  middle:     {label:"中",  className:"shift-middle",     start:"11:00", end:"20:00"},
+  late:       {label:"遅",  className:"shift-late",       start:"14:00", end:"23:00"},
+  changeover: {label:"入替",className:"shift-changeover", start:"20:00", end:"29:00"},
+  off:        {label:"公",  className:"shift-off",        start:"",      end:""},
+  requestOff: {label:"希",  className:"shift-request-off",start:"",      end:""},
+  paid:       {label:"有",  className:"shift-paid",       start:"",      end:""},
+  blank:      {label:"",    className:"shift-off",        start:"",      end:""},
+};
+
+// ── シフトパターン定義（役割ごとに違うリズム） ──
+const patterns = {
+  SM: [
+    "off","early","early","late","late","off","off",
+    "early","early","late","off","early","early","late",
+    "off","early","late","late","off","early","early",
+    "off","late","late","early","off","early","early",
+    "late","off","off"
+  ],
+  AM_early: [
+    "early","early","early","off","early","early","off",
+    "early","early","middle","off","early","early","early",
+    "requestOff","early","early","off","early","early","early",
+    "off","early","early","middle","off","early","early",
+    "early","off","paid"
+  ],
+  AM_late: [
+    "late","late","off","late","late","middle","off",
+    "late","late","off","late","late","late","off",
+    "changeover","off","late","late","off","late","late",
+    "late","off","late","late","off","late","late",
+    "off","late","late"
+  ],
+  Cr_early: [
+    "early","early","off","early","early","off","early",
+    "early","off","early","early","early","off","early",
+    "early","off","early","early","off","early","early",
+    "off","early","early","off","early","early","off",
+    "early","early","off"
+  ],
+  Cr_late: [
+    "late","off","late","late","off","late","late",
+    "off","late","late","off","late","late","off",
+    "late","late","off","late","late","off","late",
+    "late","late","off","late","late","off","late",
+    "late","off","late"
+  ],
+  Cr_mix: [
+    "early","late","off","early","late","off","middle",
+    "early","off","late","late","off","early","early",
+    "late","off","early","late","off","early","late",
+    "off","early","late","off","middle","early","off",
+    "late","early","off"
+  ],
+};
+
+// ── スタッフごとのパターン割り当て ──
+const staffPatterns = {
+  "1001": patterns.SM,
+  "1002": patterns.SM.map((v,i) => patterns.SM[(i+7)%31]),   // SMはオフセットずらす
+  "1003": patterns.AM_early,
+  "1004": patterns.AM_late,
+  "1005": patterns.AM_early.map((v,i) => patterns.AM_early[(i+4)%31]),
+  "1006": patterns.AM_late.map((v,i)  => patterns.AM_late[(i+3)%31]),
+  "1007": patterns.Cr_early,
+  "1008": patterns.Cr_late,
+  "1009": patterns.Cr_mix,
+  "1010": patterns.Cr_early.map((v,i) => patterns.Cr_early[(i+5)%31]),
+  "1011": patterns.Cr_late.map((v,i)  => patterns.Cr_late[(i+2)%31]),
+  "1012": patterns.Cr_mix.map((v,i)   => patterns.Cr_mix[(i+6)%31]),
+  "1013": patterns.Cr_early.map((v,i) => patterns.Cr_early[(i+3)%31]),
+  "1014": patterns.Cr_late.map((v,i)  => patterns.Cr_late[(i+8)%31]),
+  "1015": patterns.Cr_mix.map((v,i)   => patterns.Cr_mix[(i+4)%31]),
+};
+
+let shiftMatrix = {};
+
+function isWeekStartMonday(day) { return new Date(2026,4,day).getDay()===1; }
+function addWeekStartClass(el,day) { if(isWeekStartMonday(day)) el.classList.add("week-start"); }
+
+function initMatrix() {
+  staffList.forEach(st => {
+    shiftMatrix[st.id] = {};
+    const pat = staffPatterns[st.id] || patterns.Cr_mix;
+    days.forEach((day, i) => {
+      shiftMatrix[st.id][day] = pat[i % pat.length] || "off";
+    });
+  });
+}
+
+function buildSheet() {
+  const tbody = document.getElementById("sheetBody");
+  tbody.innerHTML = "";
+  buildStoreRows(tbody);
+  buildSummaryRows(tbody);
+  buildContactRow(tbody);
+  buildDateHeader(tbody);
+  buildStaffRows(tbody);
+}
+
+function buildStoreRows(tbody) {
+  const tr1 = document.createElement("tr");
+  tr1.innerHTML = `
+    <td class="store-cell" colspan="3">店舗：サンプル店舗（デモ）</td>
+    <td colspan="${days.length}" style="text-align:left;font-weight:900;background:#f1f5fb;font-size:8px;padding-left:4px;">
+      掲示用シフト表　2026年5月　※このデータはすべてサンプルです
+    </td>`;
+  tbody.appendChild(tr1);
+
+  const tr2 = document.createElement("tr");
+  tr2.innerHTML = `
+    <td class="store-cell" colspan="3">部門：店舗</td>
+    <td colspan="${days.length}" style="text-align:left;font-weight:900;background:#fefce8;font-size:8px;padding-left:4px;color:#78350f;">
+      イベント：1日ポケ　8日検査　15日入替作業　22日ファン感　29日店別
+    </td>`;
+  tbody.appendChild(tr2);
+}
+
+function buildSummaryRows(tbody) {
+  summaryRows.forEach(row => {
+    const tr = document.createElement("tr");
+    if(row.cls) tr.className = row.cls;
+    tr.innerHTML = `
+      <td class="summary-label">${row.label}</td>
+      <td class="summary-total-label">計</td>
+      <td class="summary-total">${row.total}</td>`;
+    days.forEach((day,i) => {
+      const td = document.createElement("td");
+      td.className = "day-col";
+      addWeekStartClass(td, day);
+      const v = row.values[i] ?? "";
+      td.textContent = v;
+      // 過不足セルの色分け
+      if(row.label === "過不足") {
+        const n = parseFloat(String(v));
+        if(n < 0) { td.style.background="#fee2e2"; td.style.color="#7f1d1d"; td.style.fontWeight="900"; }
+        else if(n > 0) { td.style.background="#dcfce7"; td.style.color="#14532d"; td.style.fontWeight="900"; }
+        else { td.style.color="#6b7280"; }
+      }
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+function buildContactRow(tbody) {
+  const tr = document.createElement("tr"); tr.className="contact-row";
+  tr.innerHTML = `<td colspan="3">連絡事項</td>`;
+  days.forEach(day => {
+    const td = document.createElement("td"); td.className="day-col";
+    addWeekStartClass(td, day); td.textContent = events[day]||"";
+    tr.appendChild(td);
+  });
+  tbody.appendChild(tr);
+}
+
+function buildDateHeader(tbody) {
+  const tr = document.createElement("tr");
+  tr.innerHTML = `<th class="staff-name-col">従業員</th><th class="staff-info-col" colspan="2">区分<br>月計</th>`;
+  days.forEach(day => {
+    const date = new Date(2026,4,day);
+    const week = ["日","月","火","水","木","金","土"][date.getDay()];
+    const th = document.createElement("th");
+    th.className = "date-head day-col"; addWeekStartClass(th, day);
+    if(week==="日") th.classList.add("sunday");
+    if(week==="土") th.classList.add("saturday");
+    th.innerHTML = `5/${day}<br>(${week})`;
+    tr.appendChild(th);
+  });
+  tbody.appendChild(tr);
+}
+
+function buildStaffRows(tbody) {
+  staffList.forEach(st => {
+    const tr = document.createElement("tr");
+
+    const nameTd = document.createElement("td");
+    nameTd.className = "staff-name-col staff-cell";
+    const roleClass = `role-${st.role}`;
+    nameTd.innerHTML = `
+      <div>${st.name}</div>
+      <div class="staff-sub">
+        <span>${st.workDays}日</span>
+        <span>${st.offDays}休</span>
+        <span>${st.hours}h</span>
+      </div>`;
+    tr.appendChild(nameTd);
+
+    const roleTd = document.createElement("td");
+    roleTd.className = "staff-info-col staff-cell"; roleTd.colSpan = 2;
+    roleTd.innerHTML = `<span class="${roleClass}">${st.role}</span><br><span style="font-size:6.5px;color:#9ca3af;">シフト</span>`;
+    tr.appendChild(roleTd);
+
+    days.forEach(day => {
+      const shiftType = shiftMatrix[st.id]?.[day] || "blank";
+      const td = document.createElement("td");
+      td.className = "shift-cell day-col"; addWeekStartClass(td, day);
+      applyShiftToCell(td, shiftType);
+      tr.appendChild(td);
+    });
+
+    tbody.appendChild(tr);
+  });
+}
+
+function applyShiftToCell(td, shiftType) {
+  const def = shiftDefs[shiftType] || shiftDefs.blank;
+  td.classList.add(def.className);
+  if(["off","requestOff","paid"].includes(shiftType)) {
+    td.innerHTML = `<span class="circle-mark">${def.label}</span>`;
+  } else if(shiftType === "blank") {
+    td.innerHTML = "";
+  } else {
+    td.innerHTML = `<div class="time-two-lines"><div>${def.start}</div><div>${def.end}</div></div>`;
+  }
+}
+
+initMatrix();
+buildSheet();
+</script>
+</body>
+</html>

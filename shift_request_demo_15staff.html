@@ -1,0 +1,1354 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>シフト希望入力 | デモ環境</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e334d;
+    --accent: #4f8ef7;
+    --accent2: #38d9a9;
+    --accent3: #ffd166;
+    --text: #e8eaf0;
+    --text-muted: #7a82a0;
+    --text-dim: #4a5070;
+    --warn: #ff6b6b;
+    --c-off: #ff6b6b;
+    --c-early: #4f8ef7;
+    --c-late: #ffd166;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: 'Noto Sans JP', -apple-system, "Hiragino Sans", sans-serif;
+    font-weight: 300;
+    margin: 0 auto; padding: 20px 16px 100px;
+    background: var(--bg); color: var(--text);
+    max-width: 900px;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.18;
+    pointer-events: none; z-index: 0;
+  }
+  #inputMode, #adminMode { position: relative; z-index: 1; }
+
+  /* ヘッダー */
+  .page-header { margin-bottom: 20px; }
+  .page-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(79,142,247,.12); border: 1px solid rgba(79,142,247,.3);
+    border-radius: 4px; padding: 3px 10px;
+    font-size: 10px; font-family: 'DM Mono', monospace;
+    color: var(--accent); letter-spacing: .08em; margin-bottom: 10px;
+  }
+  .page-badge::before {
+    content: ''; width: 5px; height: 5px; border-radius: 50%;
+    background: var(--accent); animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  h1 { font-size: 1.35rem; font-weight: 700; margin: 0 0 4px; color: var(--text); letter-spacing: -.01em; }
+  h1 span { background: linear-gradient(90deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .subtitle { color: var(--text-muted); font-size: 0.82rem; margin-bottom: 0; }
+
+  /* カード */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 18px;
+    margin-bottom: 12px;
+  }
+  h2 {
+    font-size: 0.9rem; font-weight: 700; margin: 0 0 14px;
+    color: var(--accent); letter-spacing: .05em; text-transform: uppercase;
+    font-family: 'DM Mono', monospace;
+    border-left: 3px solid var(--accent); padding-left: 10px;
+  }
+
+  label { display: block; font-weight: 500; margin-bottom: 6px; font-size: 0.88rem; color: var(--text); }
+  input[type="text"], input[type="tel"], input[type="password"], select, textarea {
+    width: 100%; padding: 11px 12px; font-size: 0.95rem;
+    border: 1px solid var(--border); border-radius: 7px;
+    background: var(--surface2); color: var(--text);
+    font-family: 'Noto Sans JP', sans-serif;
+    transition: border-color .15s;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: none; border-color: var(--accent);
+  }
+  textarea { resize: vertical; min-height: 60px; }
+
+  /* 凡例 */
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; font-size: 0.78rem; }
+  .legend-item {
+    display: flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border-radius: 5px;
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text-muted);
+  }
+  .legend-swatch { width: 12px; height: 12px; border-radius: 3px; }
+  .sw-off { background: var(--c-off); }
+  .sw-early { background: var(--c-early); }
+  .sw-late { background: var(--c-late); }
+  .tap-hint {
+    font-size: 0.78rem; color: var(--text-muted); margin-bottom: 12px;
+    padding: 8px 12px; background: rgba(255,209,102,.07);
+    border-radius: 6px; border-left: 3px solid var(--accent3);
+    line-height: 1.6;
+  }
+
+  /* カレンダー */
+  .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .cal-month { font-weight: 700; font-size: 1rem; }
+  .cal-nav {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 6px; padding: 6px 14px; font-size: 0.9rem;
+    cursor: pointer; color: var(--text); transition: background .15s;
+  }
+  .cal-nav:active { background: var(--border); }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .cal-dow { text-align: center; font-size: 0.72rem; color: var(--text-dim); padding: 4px 0; font-weight: 600; }
+  .cal-dow.sun { color: #ff7b7b; }
+  .cal-dow.sat { color: var(--accent2); }
+  .cal-day {
+    aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--border); border-radius: 6px; background: var(--surface2);
+    font-size: 0.9rem; cursor: pointer; user-select: none; transition: all 0.12s;
+  }
+  .cal-day.empty { visibility: hidden; }
+  .cal-day.sun { color: #ff7b7b; }
+  .cal-day.sat { color: var(--accent2); }
+  .cal-day:active { transform: scale(0.93); }
+  .cal-day.state-off   { background: rgba(255,107,107,.85); color: #fff !important; border-color: #e74c3c; font-weight: 700; }
+  .cal-day.state-early { background: rgba(79,142,247,.85);  color: #fff !important; border-color: #3a7ee4; font-weight: 700; }
+  .cal-day.state-late  { background: rgba(255,209,102,.85); color: #1a1d27 !important; border-color: #e6b800; font-weight: 700; }
+
+  .selected-summary {
+    margin-top: 12px; padding: 10px 12px; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 7px;
+    font-size: 0.82rem; min-height: 24px; line-height: 1.8;
+  }
+  .summary-line.off   { color: var(--c-off); }
+  .summary-line.early { color: var(--c-early); }
+  .summary-line.late  { color: var(--c-late); }
+  .summary-empty { color: var(--text-dim); }
+
+  /* ボタン */
+  .btn {
+    padding: 10px 14px; font-size: 0.88rem; font-weight: 700;
+    border: none; border-radius: 7px; cursor: pointer;
+    font-family: 'Noto Sans JP', sans-serif;
+    transition: opacity .15s, transform .1s;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary {
+    width: 100%; padding: 15px; font-size: 1rem;
+    background: linear-gradient(135deg, var(--accent), #3a6fd4);
+    color: #fff; margin-top: 8px;
+    box-shadow: 0 3px 12px rgba(79,142,247,.3);
+  }
+  .btn-secondary {
+    background: var(--surface2); color: var(--text-muted);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-warning { background: rgba(255,209,102,.15); color: var(--accent3); border: 1px solid rgba(255,209,102,.3); }
+  .btn-danger  { background: rgba(255,107,107,.15); color: var(--warn);    border: 1px solid rgba(255,107,107,.3); }
+  .btn-clear { width: 100%; padding: 9px; background: var(--surface2); color: var(--text-dim); border: 1px solid var(--border); margin-top: 8px; }
+
+  /* ステータス */
+  .status {
+    text-align: center; padding: 18px; border-radius: 8px;
+    margin-top: 12px; font-weight: 600; display: none; white-space: pre-line; font-size: 0.88rem;
+  }
+  .status.success { display: block; background: rgba(56,217,169,.1); color: var(--accent2); border: 1px solid rgba(56,217,169,.25); }
+  .status.error   { display: block; background: rgba(255,107,107,.1); color: var(--warn);    border: 1px solid rgba(255,107,107,.25); }
+  .status.info    { display: block; background: rgba(79,142,247,.1);  color: var(--accent);  border: 1px solid rgba(79,142,247,.25); }
+
+  .note-small { font-size: 0.75rem; color: var(--text-dim); margin-top: 4px; }
+
+  /* 管理ボタン */
+  .admin-dot {
+    position: fixed; bottom: 20px; right: 20px;
+    width: 52px; height: 52px; border-radius: 50%;
+    background: rgba(79,142,247,.9);
+    color: #fff; font-size: 1.3rem;
+    border: none; cursor: pointer; z-index: 9999;
+    box-shadow: 0 3px 14px rgba(79,142,247,.4);
+    display: flex; align-items: center; justify-content: center;
+    -webkit-appearance: none; appearance: none; touch-action: manipulation;
+    transition: transform .15s;
+  }
+  .admin-dot:active { transform: scale(0.93); }
+
+  /* PIN入力モーダル */
+  .modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.75); display: none;
+    align-items: center; justify-content: center; z-index: 200;
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 24px; border-radius: 14px;
+    max-width: 360px; width: 92%; max-height: 90vh; overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,.5);
+  }
+  .modal h3 { font-size: 1rem; font-weight: 700; margin: 0 0 6px; color: var(--text); }
+  .modal > p { color: var(--text-muted); font-size: 0.82rem; margin-bottom: 0; }
+  .pin-display {
+    text-align: center; font-size: 1.8rem; letter-spacing: 14px;
+    padding: 12px; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 8px;
+    margin: 16px 0; font-family: 'DM Mono', monospace; color: var(--accent);
+  }
+  .pin-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .pin-btn {
+    padding: 15px; font-size: 1.2rem; font-weight: 700;
+    background: var(--surface2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px; cursor: pointer;
+    transition: background .1s;
+  }
+  .pin-btn:active { background: var(--border); }
+
+  /* 管理画面 */
+  .admin-section { margin-bottom: 14px; }
+  .summary-badges { display: flex; gap: 8px; flex-wrap: wrap; }
+  .summary-badge {
+    padding: 7px 12px; border-radius: 7px;
+    background: var(--surface2); border: 1px solid var(--border);
+    font-size: 0.8rem; font-weight: 500; color: var(--text-muted);
+  }
+  .summary-badge .num { font-size: 1.1rem; color: var(--accent); margin-right: 3px; font-weight: 700; font-family: 'DM Mono', monospace; }
+
+  /* ヒートマップ */
+  .heatmap { display: grid; grid-template-columns: 44px repeat(7, 1fr); gap: 3px; font-size: 0.65rem; }
+  .heatmap .hm-dow { text-align: center; font-weight: 700; padding: 4px; color: var(--text-dim); }
+  .heatmap .hm-dow.sun { color: #ff7b7b; }
+  .heatmap .hm-dow.sat { color: var(--accent2); }
+  .heatmap .hm-row-label {
+    font-weight: 600; padding: 4px; text-align: center;
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-dim);
+  }
+  .hm-cell {
+    aspect-ratio: 1.1; padding: 3px; border-radius: 5px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: var(--surface2); border: 1px solid var(--border);
+  }
+  .hm-cell.empty { visibility: hidden; }
+  .hm-cell .day-num { font-weight: 700; font-size: 0.72rem; color: var(--text-muted); }
+  .hm-cell .day-num.sun { color: #ff7b7b; }
+  .hm-cell .day-num.sat { color: var(--accent2); }
+  .hm-cell .counts { display: flex; gap: 2px; margin-top: 2px; }
+  .count-badge {
+    padding: 1px 3px; border-radius: 3px; color: #fff; font-weight: 700;
+    min-width: 13px; text-align: center; font-size: 0.58rem;
+  }
+  .count-off   { background: var(--c-off); }
+  .count-early { background: var(--c-early); }
+  .count-late  { background: #b89800; color: #fff; }
+  .hm-cell.warning { background: rgba(255,209,102,.12); border-color: rgba(255,209,102,.35); }
+  .hm-cell.danger  { background: rgba(255,107,107,.15); border-color: rgba(255,107,107,.4); }
+
+  /* 一覧表 */
+  table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+  th, td { padding: 7px 6px; border: 1px solid var(--border); text-align: left; }
+  th { background: var(--surface2); font-weight: 700; color: var(--text-muted); font-size: 0.72rem; }
+  tr:nth-child(even) td { background: rgba(255,255,255,.02); }
+  td.center { text-align: center; }
+  td.off   { color: var(--c-off);   font-weight: 600; }
+  td.early { color: var(--c-early); font-weight: 600; }
+  td.late  { color: var(--c-late);  font-weight: 600; }
+  .role-badge {
+    display: inline-block; padding: 2px 7px; border-radius: 4px;
+    font-size: 0.68rem; font-weight: 700;
+  }
+  .role-SM { background: rgba(142,68,173,.3);  color: #c39bd3; border: 1px solid rgba(142,68,173,.4); }
+  .role-AM { background: rgba(41,128,185,.3);  color: #7fb3d3; border: 1px solid rgba(41,128,185,.4); }
+  .role-ST { background: rgba(39,174,96,.3);   color: #7dcea0; border: 1px solid rgba(39,174,96,.4); }
+  .role-Cr { background: rgba(230,126,34,.3);  color: #f0b27a; border: 1px solid rgba(230,126,34,.4); }
+  .role-other { background: var(--surface2); color: var(--text-dim); border: 1px solid var(--border); }
+
+  .pending-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .pending-chip {
+    padding: 4px 10px; border-radius: 20px;
+    background: rgba(255,107,107,.1); color: var(--warn);
+    font-size: 0.82rem; font-weight: 600;
+    border: 1px solid rgba(255,107,107,.25);
+  }
+
+  .hidden { display: none !important; }
+  .existing-notice {
+    background: rgba(255,209,102,.1); border: 1px solid rgba(255,209,102,.3);
+    border-left: 3px solid var(--accent3);
+    padding: 10px 12px; border-radius: 7px; margin-bottom: 12px; font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  /* モーダル内ラベル */
+  .modal label { color: var(--text-muted); margin-top: 12px; font-size: 0.82rem; }
+  .modal input, .modal select, .modal textarea { margin-bottom: 0; }
+</style>
+</head>
+<body>
+
+<!-- ========== 入力モード画面 ========== -->
+<div id="inputMode">
+  <div class="page-header">
+    <div class="page-badge">DEMO / 従業員入力画面</div>
+    <h1><span>シフト希望</span>提出フォーム</h1>
+    <div class="subtitle">サンプル店舗 &nbsp;／&nbsp; 日付をタップして希望を入力してください</div>
+  </div>
+
+  <div class="card">
+    <label for="empId">社員番号</label>
+    <input type="tel" id="empId" inputmode="numeric" pattern="[0-9]*" placeholder="例:1234" autocomplete="off">
+    <div class="note-small">数字のみ入力</div>
+    <div id="existingNotice" class="existing-notice hidden">
+      既に送信済みの内容があります。修正する場合は下の「既存データを読み込み」を押してください。
+      <button class="btn btn-warning" id="loadExistingBtn" style="width:100%;margin-top:8px;">既存データを読み込み</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <label>対象月</label>
+    <select id="targetMonth"></select>
+  </div>
+
+  <div class="card">
+    <label>希望入力</label>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-swatch sw-off"></div>休み希望</div>
+      <div class="legend-item"><div class="legend-swatch sw-early"></div>早番不可</div>
+      <div class="legend-item"><div class="legend-swatch sw-late"></div>遅番不可</div>
+    </div>
+    <div class="tap-hint">
+      日付をタップすると状態が切り替わります<br>
+      <strong>なし → 休み → 早番不可 → 遅番不可 → なし...</strong>
+    </div>
+    <div class="cal-header">
+      <button class="cal-nav" id="prevMonth">◀</button>
+      <div class="cal-month" id="calMonthLabel"></div>
+      <button class="cal-nav" id="nextMonth">▶</button>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="selected-summary" id="selectedSummary"></div>
+    <button class="btn btn-clear" id="clearBtn">すべてクリア</button>
+  </div>
+
+  <div class="card">
+    <label for="note">備考(任意)</label>
+    <textarea id="note" placeholder="例:12日は結婚式で終日不可 等"></textarea>
+  </div>
+
+  <button class="btn btn-primary" id="submitBtn">送信する</button>
+  <div class="status" id="status"></div>
+</div>
+
+<!-- ========== 管理モード画面 ========== -->
+<div id="adminMode" class="hidden">
+  <div class="page-header">
+    <div class="page-badge">ADMIN / 管理画面</div>
+    <h1>🔐 <span>管理</span>ダッシュボード</h1>
+  </div>
+  <div style="margin-bottom:14px;">
+    <button class="btn btn-secondary" id="exitAdminBtn" style="padding:7px 14px;font-size:0.82rem;">← 入力モードに戻る</button>
+  </div>
+
+  <div class="card admin-section">
+    <h2>対象月</h2>
+    <select id="adminTargetMonth"></select>
+  </div>
+
+  <div class="card admin-section">
+    <h2>サマリ</h2>
+    <div class="summary-badges" id="summaryBadges"></div>
+  </div>
+
+  <div class="card admin-section">
+    <h2>ヒートマップ</h2>
+    <div class="heatmap" id="heatmap"></div>
+  </div>
+
+  <div class="card admin-section">
+    <h2>未提出者</h2>
+    <div id="pendingList"></div>
+  </div>
+
+  <div class="card admin-section">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+      <h2 style="margin:0;border:none;padding:0;">提出一覧</h2>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="btn btn-secondary" id="addPaperBtn" style="padding:6px 12px;font-size:0.85rem;">+ 紙組代理入力</button>
+        <button class="btn btn-secondary" id="exportCsvBtn" style="padding:6px 12px;font-size:0.85rem;">CSVダウンロード</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table id="requestTable">
+        <thead>
+          <tr>
+            <th>区分</th><th>氏名</th><th>社員番号</th>
+            <th>🔴休</th><th>🔵早</th><th>🟡遅</th>
+            <th>備考</th><th>提出</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card admin-section">
+    <h2>名簿管理</h2>
+    <p style="font-size:0.85rem;color:#666;">社員番号↔氏名の対応を登録。CSVで一括インポート可。</p>
+    <label class="btn btn-secondary" style="display:inline-block;cursor:pointer;">
+      名簿CSVインポート
+      <input type="file" id="rosterFile" accept=".csv" style="display:none;">
+    </label>
+    <button class="btn btn-secondary" id="addRosterBtn" style="margin-left:6px;">+ 手動追加</button>
+    <button class="btn btn-secondary" id="exportRosterBtn" style="margin-left:6px;">名簿CSV書出</button>
+    <div style="margin-top:12px;overflow-x:auto;">
+      <table>
+        <thead><tr><th>社員番号</th><th>氏名</th><th>区分</th><th>備考</th><th></th></tr></thead>
+        <tbody id="rosterBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card admin-section">
+    <h2>⚠️ 危険ゾーン</h2>
+    <button class="btn btn-danger" id="deleteAllBtn">全希望データを削除</button>
+    <button class="btn btn-danger" id="deleteRosterBtn" style="margin-left:6px;">名簿を全削除</button>
+    <button class="btn btn-danger" id="changePinBtn" style="margin-left:6px;">PIN変更</button>
+    <p class="note-small">※削除すると元に戻せません。</p>
+  </div>
+</div>
+
+<!-- 管理画面アクセスボタン(常時表示) -->
+<button class="admin-dot" id="adminDot" title="管理">🔐</button>
+
+<!-- PIN入力モーダル -->
+<div class="modal-overlay" id="pinModal">
+  <div class="modal">
+    <h3>管理画面アクセス</h3>
+    <p style="font-size:0.9rem;color:#666;">PINコードを入力してください</p>
+    <div class="pin-display" id="pinDisplay">____</div>
+    <div class="pin-pad">
+      <button class="pin-btn" data-n="1">1</button>
+      <button class="pin-btn" data-n="2">2</button>
+      <button class="pin-btn" data-n="3">3</button>
+      <button class="pin-btn" data-n="4">4</button>
+      <button class="pin-btn" data-n="5">5</button>
+      <button class="pin-btn" data-n="6">6</button>
+      <button class="pin-btn" data-n="7">7</button>
+      <button class="pin-btn" data-n="8">8</button>
+      <button class="pin-btn" data-n="9">9</button>
+      <button class="pin-btn" id="pinBack">←</button>
+      <button class="pin-btn" data-n="0">0</button>
+      <button class="pin-btn" id="pinCancel" style="background:#e74c3c;color:#fff;">✕</button>
+    </div>
+    <div id="pinError" style="color:#c0392b;text-align:center;margin-top:10px;height:20px;"></div>
+  </div>
+</div>
+
+<!-- 紙組代理入力モーダル -->
+<div class="modal-overlay" id="paperModal">
+  <div class="modal">
+    <h3>紙組代理入力</h3>
+    <label>社員番号</label>
+    <input type="tel" id="paperEmpId" placeholder="例:1234">
+    <label>対象月</label>
+    <input type="month" id="paperMonth">
+    <label>休み希望日(カンマ区切り)</label>
+    <input type="text" id="paperOff" placeholder="例:5,12,20">
+    <label>早番不可日(カンマ区切り)</label>
+    <input type="text" id="paperEarly" placeholder="例:3,17">
+    <label>遅番不可日(カンマ区切り)</label>
+    <input type="text" id="paperLate" placeholder="例:8,22">
+    <label>備考</label>
+    <textarea id="paperNote" rows="2"></textarea>
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <button class="btn btn-secondary" id="paperCancelBtn" style="flex:1;">キャンセル</button>
+      <button class="btn btn-primary" id="paperSaveBtn" style="flex:1;margin:0;padding:12px;font-size:0.95rem;">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 名簿追加モーダル -->
+<div class="modal-overlay" id="rosterModal">
+  <div class="modal">
+    <h3 id="rosterModalTitle">名簿に追加</h3>
+    <label>社員番号</label>
+    <input type="tel" id="rosterEmpId">
+    <label>氏名</label>
+    <input type="text" id="rosterName">
+    <label>雇用区分</label>
+    <select id="rosterRole">
+      <option value="SM">SM</option>
+      <option value="AM">AM</option>
+      <option value="ST">ST</option>
+      <option value="Cr">Cr</option>
+    </select>
+    <label>備考</label>
+    <input type="text" id="rosterNote">
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <button class="btn btn-secondary" id="rosterCancelBtn" style="flex:1;">キャンセル</button>
+      <button class="btn btn-primary" id="rosterSaveBtn" style="flex:1;margin:0;padding:12px;font-size:0.95rem;">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ====== 設定 ======
+  const LS_REQUESTS = 'shift_demo_requests_v1';
+  const LS_ROSTER   = 'shift_demo_roster_v1';
+  const LS_PIN      = 'shift_demo_pin_v1';
+  const LS_SEEDED   = 'shift_demo_seeded_v1';
+  const DEFAULT_PIN = '1234';
+
+  // ====== ストレージ操作（localStorage非対応環境フォールバック付き） ======
+  const _store = (() => {
+    try { localStorage.setItem('_t','1'); localStorage.removeItem('_t'); return localStorage; }
+    catch(e) { const m = {}; return { getItem: k => m[k]||null, setItem: (k,v) => { m[k]=v; }, removeItem: k => { delete m[k]; } }; }
+  })();
+
+  function loadRequests() { try { return JSON.parse(_store.getItem(LS_REQUESTS) || '[]'); } catch(e) { return []; } }
+  function saveRequests(arr) { _store.setItem(LS_REQUESTS, JSON.stringify(arr)); }
+  function loadRoster()   { try { return JSON.parse(_store.getItem(LS_ROSTER)   || '[]'); } catch(e) { return []; } }
+  function saveRoster(arr)  { _store.setItem(LS_ROSTER, JSON.stringify(arr)); }
+  function getPin() { return _store.getItem(LS_PIN) || DEFAULT_PIN; }
+  function setPin(pin) { _store.setItem(LS_PIN, pin); }
+
+  // ====== デモ用サンプルデータ初期投入（初回のみ） ======
+  (function seedDemoData() {
+    if (_store.getItem(LS_SEEDED)) return;
+    const demoRoster = [
+      { empId:'1001', name:'山田 太郎',   role:'SM', note:'' },
+      { empId:'1002', name:'佐藤 花子',   role:'AM', note:'' },
+      { empId:'1003', name:'鈴木 一郎',   role:'ST', note:'' },
+      { empId:'1004', name:'田中 美咲',   role:'ST', note:'' },
+      { empId:'1005', name:'中村 健二',   role:'Cr', note:'' },
+      { empId:'1006', name:'小林 さくら', role:'Cr', note:'' },
+      { empId:'1007', name:'加藤 大輔',   role:'Cr', note:'' },
+      { empId:'1008', name:'渡辺 陽子',   role:'Cr', note:'' },
+      { empId:'1009', name:'伊藤 翔',     role:'Cr', note:'' },
+      { empId:'1010', name:'山本 奈々',   role:'Cr', note:'' }
+    ];
+    saveRoster(demoRoster);
+
+    const now = new Date();
+    const nextM = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const ny = nextM.getFullYear();
+    const nm = String(nextM.getMonth() + 1).padStart(2,'0');
+    const targetMonth = `${ny}-${nm}`;
+    const ts = new Date().toISOString();
+
+    const demoRequests = [
+      { timestamp:ts, empId:'1001', targetMonth, offDays:'3,10,17,24',    noEarlyDays:'',       noLateDays:'6,13',    note:'',          source:'ipad' },
+      { timestamp:ts, empId:'1002', targetMonth, offDays:'5,12,19',       noEarlyDays:'1,8,15', noLateDays:'',        note:'',          source:'ipad' },
+      { timestamp:ts, empId:'1003', targetMonth, offDays:'7,14',          noEarlyDays:'',       noLateDays:'21,28',   note:'',          source:'ipad' },
+      { timestamp:ts, empId:'1004', targetMonth, offDays:'2,9,16,23',     noEarlyDays:'5,12',   noLateDays:'',        note:'授業あり',   source:'ipad' },
+      { timestamp:ts, empId:'1005', targetMonth, offDays:'1,8,15,22,29',  noEarlyDays:'',       noLateDays:'',        note:'',          source:'ipad' },
+      { timestamp:ts, empId:'1006', targetMonth, offDays:'4,11',          noEarlyDays:'18,25',  noLateDays:'',        note:'',          source:'paper'},
+      { timestamp:ts, empId:'1007', targetMonth, offDays:'6,13,20,27',    noEarlyDays:'',       noLateDays:'3,10,17', note:'',          source:'ipad' },
+      { timestamp:ts, empId:'1008', targetMonth, offDays:'3,10',          noEarlyDays:'',       noLateDays:'',        note:'',          source:'ipad' }
+    ];
+    saveRequests(demoRequests);
+    _store.setItem(LS_SEEDED, '1');
+  })();
+
+  // ====== 入力モード ======
+  const STATES = [null, 'off', 'early', 'late'];
+  const inputState = {
+    dayStates: new Map(),
+    viewYear: 0,
+    viewMonth: 0,
+    editingEmpId: null,
+    editingTargetMonth: null
+  };
+
+  function pad2(n) {
+    return String(n).padStart(2, '0');
+  }
+
+  function formatYearMonth(year, month) {
+    return `${year}-${pad2(month)}`;
+  }
+
+  function ensureTargetMonthOption(year, month) {
+    const value = formatYearMonth(year, month);
+    const exists = [...targetMonthEl.options].some(opt => opt.value === value);
+    if (!exists) {
+      const opt = document.createElement('option');
+      opt.value = value;
+      opt.textContent = `${year}年${month}月`;
+      targetMonthEl.appendChild(opt);
+      const options = [...targetMonthEl.options].sort((a, b) => a.value.localeCompare(b.value));
+      targetMonthEl.innerHTML = '';
+      options.forEach(option => targetMonthEl.appendChild(option));
+    }
+    return value;
+  }
+
+  function resetEditingContext() {
+    inputState.editingEmpId = null;
+    inputState.editingTargetMonth = null;
+  }
+
+  function applyMonthSelection(year, month, options = {}) {
+    const { clearSelections = true, clearNote = true, preserveLoadedData = false } = options;
+    const value = ensureTargetMonthOption(year, month);
+    inputState.viewYear = year;
+    inputState.viewMonth = month;
+    targetMonthEl.value = value;
+
+    const isLoadedMonth = preserveLoadedData &&
+      inputState.editingEmpId &&
+      inputState.editingTargetMonth === value;
+
+    if (!isLoadedMonth) {
+      if (clearSelections) inputState.dayStates.clear();
+      if (clearNote) document.getElementById('note').value = '';
+      resetEditingContext();
+    }
+
+    renderCalendar();
+    checkExisting();
+  }
+
+  function csvEscape(value) {
+    const str = value == null ? '' : String(value);
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+
+  function currentInputMonthValue() {
+    return formatYearMonth(inputState.viewYear, inputState.viewMonth);
+  }
+
+  const targetMonthEl = document.getElementById('targetMonth');
+  const today = new Date();
+  for (let i = 0; i < 3; i++) {
+    const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
+    const label = `${d.getFullYear()}年${d.getMonth() + 1}月`;
+    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const opt = document.createElement('option');
+    opt.value = value; opt.textContent = label;
+    if (i === 1) opt.selected = true;
+    targetMonthEl.appendChild(opt);
+  }
+
+  function syncViewWithTarget() {
+    const [y, m] = targetMonthEl.value.split('-').map(Number);
+    applyMonthSelection(y, m, {
+      clearSelections: true,
+      clearNote: true,
+      preserveLoadedData: true
+    });
+  }
+
+  function renderCalendar() {
+    const { viewYear, viewMonth } = inputState;
+    document.getElementById('calMonthLabel').textContent = `${viewYear}年${viewMonth}月`;
+    const grid = document.getElementById('calGrid');
+    grid.innerHTML = '';
+    const dows = ['日','月','火','水','木','金','土'];
+    dows.forEach((d, i) => {
+      const el = document.createElement('div');
+      el.className = 'cal-dow';
+      if (i === 0) el.classList.add('sun');
+      if (i === 6) el.classList.add('sat');
+      el.textContent = d;
+      grid.appendChild(el);
+    });
+    const firstDow = new Date(viewYear, viewMonth - 1, 1).getDay();
+    const lastDay = new Date(viewYear, viewMonth, 0).getDate();
+    for (let i = 0; i < firstDow; i++) {
+      const el = document.createElement('div');
+      el.className = 'cal-day empty';
+      grid.appendChild(el);
+    }
+    for (let d = 1; d <= lastDay; d++) {
+      const el = document.createElement('div');
+      el.className = 'cal-day';
+      const dow = new Date(viewYear, viewMonth - 1, d).getDay();
+      if (dow === 0) el.classList.add('sun');
+      if (dow === 6) el.classList.add('sat');
+      const s = inputState.dayStates.get(d);
+      if (s) el.classList.add('state-' + s);
+      el.textContent = d;
+      el.addEventListener('click', () => toggleDay(d));
+      grid.appendChild(el);
+    }
+    updateSummary();
+  }
+
+  function toggleDay(d) {
+    const cur = inputState.dayStates.get(d) || null;
+    const idx = STATES.indexOf(cur);
+    const next = STATES[(idx + 1) % STATES.length];
+    if (next === null) inputState.dayStates.delete(d);
+    else inputState.dayStates.set(d, next);
+    renderCalendar();
+  }
+
+  function updateSummary() {
+    const el = document.getElementById('selectedSummary');
+    const groups = { off: [], early: [], late: [] };
+    [...inputState.dayStates.entries()].forEach(([day, s]) => groups[s].push(day));
+    Object.keys(groups).forEach(k => groups[k].sort((a,b) => a - b));
+    const total = groups.off.length + groups.early.length + groups.late.length;
+    if (total === 0) { el.innerHTML = '<span class="summary-empty">未選択</span>'; return; }
+    const lines = [];
+    if (groups.off.length) lines.push(`<div class="summary-line off">🔴 休み希望:${groups.off.join('、')}日 (${groups.off.length}日)</div>`);
+    if (groups.early.length) lines.push(`<div class="summary-line early">🔵 早番不可:${groups.early.join('、')}日 (${groups.early.length}日)</div>`);
+    if (groups.late.length) lines.push(`<div class="summary-line late">🟡 遅番不可:${groups.late.join('、')}日 (${groups.late.length}日)</div>`);
+    el.innerHTML = lines.join('');
+  }
+
+  function parseDaysStr(str) {
+    if (!str) return [];
+    return String(str).split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
+  }
+
+  // 既存データ確認
+  function checkExisting() {
+    const empId = document.getElementById('empId').value.trim();
+    const month = targetMonthEl.value;
+    const notice = document.getElementById('existingNotice');
+    if (!empId || !month) { notice.classList.add('hidden'); return; }
+    const reqs = loadRequests();
+    const existing = reqs.find(r => r.empId === empId && r.targetMonth === month);
+    const isEditingSameRecord =
+      inputState.editingEmpId === empId && inputState.editingTargetMonth === month;
+    if (existing && !isEditingSameRecord) {
+      notice.classList.remove('hidden');
+    } else {
+      notice.classList.add('hidden');
+    }
+  }
+
+  document.getElementById('empId').addEventListener('input', checkExisting);
+
+  document.getElementById('loadExistingBtn').addEventListener('click', () => {
+    const empId = document.getElementById('empId').value.trim();
+    const month = targetMonthEl.value;
+    const reqs = loadRequests();
+    const existing = reqs.find(r => r.empId === empId && r.targetMonth === month);
+    if (!existing) return;
+    inputState.editingEmpId = empId;
+    inputState.editingTargetMonth = month;
+    inputState.dayStates.clear();
+    parseDaysStr(existing.offDays).forEach(d => inputState.dayStates.set(d, 'off'));
+    parseDaysStr(existing.noEarlyDays).forEach(d => inputState.dayStates.set(d, 'early'));
+    parseDaysStr(existing.noLateDays).forEach(d => inputState.dayStates.set(d, 'late'));
+    document.getElementById('note').value = existing.note || '';
+    renderCalendar();
+    document.getElementById('existingNotice').classList.add('hidden');
+    showStatus('既存データを読み込みました。修正して再送信してください。', 'info');
+  });
+
+  targetMonthEl.addEventListener('change', syncViewWithTarget);
+  document.getElementById('prevMonth').addEventListener('click', () => {
+    let year = inputState.viewYear;
+    let month = inputState.viewMonth - 1;
+    if (month < 1) { month = 12; year--; }
+    applyMonthSelection(year, month);
+  });
+  document.getElementById('nextMonth').addEventListener('click', () => {
+    let year = inputState.viewYear;
+    let month = inputState.viewMonth + 1;
+    if (month > 12) { month = 1; year++; }
+    applyMonthSelection(year, month);
+  });
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    if (inputState.dayStates.size === 0) return;
+    if (confirm('選択をすべてクリアしますか?')) {
+      inputState.dayStates.clear();
+      renderCalendar();
+    }
+  });
+
+  document.getElementById('submitBtn').addEventListener('click', () => {
+    const empId = document.getElementById('empId').value.trim();
+    const targetMonth = currentInputMonthValue();
+    const note = document.getElementById('note').value.trim();
+
+    if (!empId) { showStatus('社員番号を入力してください', 'error'); return; }
+    if (!/^[0-9]+$/.test(empId)) { showStatus('社員番号は数字のみで入力してください', 'error'); return; }
+
+    const groups = { off: [], early: [], late: [] };
+    [...inputState.dayStates.entries()].forEach(([day, s]) => groups[s].push(day));
+    Object.keys(groups).forEach(k => groups[k].sort((a,b) => a - b));
+    const total = groups.off.length + groups.early.length + groups.late.length;
+    if (total === 0) {
+      if (!confirm('希望が未選択です。制約なし(全日・全時間帯OK)として送信しますか?')) return;
+    }
+
+    const newReq = {
+      timestamp: new Date().toISOString(),
+      empId, targetMonth,
+      offDays: groups.off.join(','),
+      noEarlyDays: groups.early.join(','),
+      noLateDays: groups.late.join(','),
+      note, source: 'ipad'
+    };
+
+    const reqs = loadRequests();
+    const existingIdx = reqs.findIndex(r => r.empId === empId && r.targetMonth === targetMonth);
+    let mode = '新規送信';
+    if (existingIdx >= 0) {
+      reqs[existingIdx] = newReq;
+      mode = '上書き送信';
+    } else {
+      reqs.push(newReq);
+    }
+    saveRequests(reqs);
+
+    showStatus(
+      `${mode}完了\n社員番号:${empId}\n対象月:${targetMonth}\n🔴休:${groups.off.join('、') || 'なし'}\n🔵早:${groups.early.join('、') || 'なし'}\n🟡遅:${groups.late.join('、') || 'なし'}\n\n3秒後に画面をリセットします`,
+      'success'
+    );
+
+    setTimeout(() => {
+      resetInputForm();
+    }, 3000);
+  });
+
+  function resetInputForm() {
+    document.getElementById('empId').value = '';
+    document.getElementById('note').value = '';
+    inputState.dayStates.clear();
+    resetEditingContext();
+    document.getElementById('existingNotice').classList.add('hidden');
+    document.getElementById('status').style.display = 'none';
+    renderCalendar();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function showStatus(msg, type) {
+    const el = document.getElementById('status');
+    el.textContent = msg;
+    el.className = 'status ' + type;
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+  }
+
+  // ====== PIN管理 ======
+  const pinModal = document.getElementById('pinModal');
+  let pinInput = '';
+  let pinMode = 'auth'; // 'auth' or 'change'
+  let pinChangeStep = 0;
+  let pinChangeNew = '';
+
+  function openPinModal() {
+    pinInput = '';
+    pinMode = 'auth';
+    updatePinDisplay();
+    document.getElementById('pinError').textContent = '';
+    pinModal.classList.add('show');
+  }
+
+  function updatePinDisplay() {
+    const dots = '●'.repeat(pinInput.length) + '_'.repeat(4 - pinInput.length);
+    document.getElementById('pinDisplay').textContent = dots;
+  }
+
+  document.querySelectorAll('.pin-btn[data-n]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (pinInput.length >= 4) return;
+      pinInput += btn.dataset.n;
+      updatePinDisplay();
+      if (pinInput.length === 4) {
+        setTimeout(checkPin, 150);
+      }
+    });
+  });
+  document.getElementById('pinBack').addEventListener('click', () => {
+    pinInput = pinInput.slice(0, -1);
+    updatePinDisplay();
+  });
+  document.getElementById('pinCancel').addEventListener('click', () => {
+    pinModal.classList.remove('show');
+    pinInput = ''; pinMode = 'auth'; pinChangeStep = 0; pinChangeNew = '';
+  });
+
+  function checkPin() {
+    if (pinMode === 'auth') {
+      if (pinInput === getPin()) {
+        pinModal.classList.remove('show');
+        showAdminMode();
+      } else {
+        document.getElementById('pinError').textContent = 'PINが違います';
+        pinInput = '';
+        setTimeout(updatePinDisplay, 300);
+      }
+    } else if (pinMode === 'change') {
+      if (pinChangeStep === 0) {
+        if (pinInput === getPin()) {
+          pinChangeStep = 1;
+          pinInput = '';
+          updatePinDisplay();
+          document.getElementById('pinError').textContent = '新しいPINを入力';
+        } else {
+          document.getElementById('pinError').textContent = '現在のPINが違います';
+          pinInput = '';
+          setTimeout(updatePinDisplay, 300);
+        }
+      } else if (pinChangeStep === 1) {
+        pinChangeNew = pinInput;
+        pinChangeStep = 2;
+        pinInput = '';
+        updatePinDisplay();
+        document.getElementById('pinError').textContent = 'もう一度入力';
+      } else {
+        if (pinInput === pinChangeNew) {
+          setPin(pinChangeNew);
+          pinModal.classList.remove('show');
+          pinInput = ''; pinChangeStep = 0; pinChangeNew = '';
+          alert('PINを変更しました');
+        } else {
+          document.getElementById('pinError').textContent = '一致しません。最初からやり直し';
+          pinInput = ''; pinChangeStep = 0; pinChangeNew = '';
+          setTimeout(() => {
+            updatePinDisplay();
+            document.getElementById('pinError').textContent = '';
+          }, 1500);
+        }
+      }
+    }
+  }
+
+  // iPad Safari対応:clickとtouchendの両方でリッスン
+  const adminDotBtn = document.getElementById('adminDot');
+  let adminDotHandled = false;
+  adminDotBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (adminDotHandled) { adminDotHandled = false; return; }
+    openPinModal();
+  });
+  adminDotBtn.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    adminDotHandled = true;
+    openPinModal();
+    setTimeout(() => { adminDotHandled = false; }, 500);
+  });
+
+  // ====== モード切替 ======
+  function showAdminMode() {
+    document.getElementById('inputMode').classList.add('hidden');
+    document.getElementById('adminMode').classList.remove('hidden');
+    syncAdminMonth();
+    renderAdmin();
+    renderRoster();
+  }
+  function showInputMode() {
+    document.getElementById('adminMode').classList.add('hidden');
+    document.getElementById('inputMode').classList.remove('hidden');
+    resetInputForm();
+  }
+  document.getElementById('exitAdminBtn').addEventListener('click', showInputMode);
+
+  // ====== 管理モード ======
+  const adminMonthEl = document.getElementById('adminTargetMonth');
+  function syncAdminMonth() {
+    adminMonthEl.innerHTML = '';
+    const months = new Set();
+    loadRequests().forEach(r => months.add(r.targetMonth));
+    // 現在前後もオプションに追加
+    for (let i = -1; i < 4; i++) {
+      const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
+      months.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    }
+    const sorted = [...months].sort();
+    const currentDefault = `${today.getFullYear()}-${String(today.getMonth() + 2).padStart(2, '0')}`;
+    sorted.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m;
+      const [y, mo] = m.split('-');
+      opt.textContent = `${y}年${parseInt(mo)}月`;
+      if (m === currentDefault) opt.selected = true;
+      adminMonthEl.appendChild(opt);
+    });
+  }
+  adminMonthEl.addEventListener('change', renderAdmin);
+
+  function renderAdmin() {
+    renderSummary();
+    renderHeatmap();
+    renderPending();
+    renderTable();
+  }
+
+  function getMonthRequests() {
+    const month = adminMonthEl.value;
+    return loadRequests().filter(r => r.targetMonth === month);
+  }
+
+  function getNameFromEmpId(empId) {
+    const r = loadRoster().find(x => x.empId === empId);
+    return r ? r.name : '';
+  }
+  function getRoleFromEmpId(empId) {
+    const r = loadRoster().find(x => x.empId === empId);
+    return r ? r.role : '';
+  }
+
+  function renderSummary() {
+    const month = adminMonthEl.value;
+    const reqs = getMonthRequests();
+    const roster = loadRoster();
+    const submittedIds = new Set(reqs.map(r => r.empId));
+    const pendingCount = roster.filter(r => !submittedIds.has(r.empId)).length;
+    let totalOff = 0, totalEarly = 0, totalLate = 0;
+    reqs.forEach(r => {
+      totalOff += parseDaysStr(r.offDays).length;
+      totalEarly += parseDaysStr(r.noEarlyDays).length;
+      totalLate += parseDaysStr(r.noLateDays).length;
+    });
+    const badges = [
+      `<div class="summary-badge">対象月:<span class="num">${month}</span></div>`,
+      `<div class="summary-badge">名簿:<span class="num">${roster.length}</span>名</div>`,
+      `<div class="summary-badge">提出済:<span class="num">${reqs.length}</span>名</div>`,
+      `<div class="summary-badge" style="background:${pendingCount>0?'#ffe6e6':'#d4edda'};">未提出:<span class="num">${pendingCount}</span>名</div>`,
+      `<div class="summary-badge">🔴休:<span class="num">${totalOff}</span></div>`,
+      `<div class="summary-badge">🔵早不:<span class="num">${totalEarly}</span></div>`,
+      `<div class="summary-badge">🟡遅不:<span class="num">${totalLate}</span></div>`
+    ];
+    document.getElementById('summaryBadges').innerHTML = badges.join('');
+  }
+
+  function renderHeatmap() {
+    const month = adminMonthEl.value;
+    const [y, m] = month.split('-').map(Number);
+    const lastDay = new Date(y, m, 0).getDate();
+    const firstDow = new Date(y, m - 1, 1).getDay();
+    const counts = {};
+    for (let d = 1; d <= lastDay; d++) counts[d] = { off: 0, early: 0, late: 0 };
+    getMonthRequests().forEach(r => {
+      parseDaysStr(r.offDays).forEach(d => { if (counts[d]) counts[d].off++; });
+      parseDaysStr(r.noEarlyDays).forEach(d => { if (counts[d]) counts[d].early++; });
+      parseDaysStr(r.noLateDays).forEach(d => { if (counts[d]) counts[d].late++; });
+    });
+    const grid = document.getElementById('heatmap');
+    let html = '';
+    html += '<div></div>';
+    ['日','月','火','水','木','金','土'].forEach((w, i) => {
+      const cls = i === 0 ? 'sun' : (i === 6 ? 'sat' : '');
+      html += `<div class="hm-dow ${cls}">${w}</div>`;
+    });
+    let week = 1, dayPtr = 1, firstRow = true;
+    while (dayPtr <= lastDay) {
+      html += `<div class="hm-row-label">${week}週</div>`;
+      for (let dow = 0; dow < 7; dow++) {
+        if (firstRow && dow < firstDow) { html += '<div class="hm-cell empty"></div>'; continue; }
+        if (dayPtr > lastDay) { html += '<div class="hm-cell empty"></div>'; continue; }
+        const d = dayPtr, c = counts[d];
+        let cellCls = 'hm-cell';
+        if (c.off >= 6) cellCls += ' danger';
+        else if (c.off >= 4) cellCls += ' warning';
+        const dowCls = dow === 0 ? 'sun' : (dow === 6 ? 'sat' : '');
+        const badges = [
+          c.off > 0 ? `<span class="count-badge count-off">${c.off}</span>` : '',
+          c.early > 0 ? `<span class="count-badge count-early">${c.early}</span>` : '',
+          c.late > 0 ? `<span class="count-badge count-late">${c.late}</span>` : ''
+        ].filter(x => x).join('');
+        html += `<div class="${cellCls}"><div class="day-num ${dowCls}">${d}</div><div class="counts">${badges}</div></div>`;
+        dayPtr++;
+      }
+      firstRow = false; week++;
+    }
+    grid.innerHTML = html;
+  }
+
+  function renderPending() {
+    const roster = loadRoster();
+    if (!roster.length) { document.getElementById('pendingList').innerHTML = '<span style="color:#888;">名簿が未登録です</span>'; return; }
+    const submitted = new Set(getMonthRequests().map(r => r.empId));
+    const pending = roster.filter(r => !submitted.has(r.empId));
+    if (pending.length === 0) {
+      document.getElementById('pendingList').innerHTML = '<div class="status success" style="display:block;">🎉 全員提出済み!</div>';
+    } else {
+      document.getElementById('pendingList').innerHTML =
+        '<div class="pending-list">' +
+        pending.map(r => `<span class="pending-chip">${r.name || r.empId} <span style="color:#888;font-size:0.75rem;">(${r.empId})</span></span>`).join('') +
+        '</div>';
+    }
+  }
+
+  function renderTable() {
+    const reqs = getMonthRequests();
+    const roleOrder = { SM: 1, AM: 2, ST: 3, Cr: 4 };
+    reqs.sort((a, b) => {
+      const oa = roleOrder[getRoleFromEmpId(a.empId)] || 99;
+      const ob = roleOrder[getRoleFromEmpId(b.empId)] || 99;
+      if (oa !== ob) return oa - ob;
+      return (getNameFromEmpId(a.empId) || a.empId).localeCompare(getNameFromEmpId(b.empId) || b.empId, 'ja');
+    });
+    const tbody = document.getElementById('tableBody');
+    if (reqs.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="9" class="center" style="color:#888;">データがありません</td></tr>';
+    } else {
+      tbody.innerHTML = reqs.map(r => {
+        const name = getNameFromEmpId(r.empId) || '<span style="color:#999;">(未登録)</span>';
+        const role = getRoleFromEmpId(r.empId);
+        const roleClass = ['SM','AM','ST','Cr'].includes(role) ? `role-${role}` : 'role-other';
+        const off = parseDaysStr(r.offDays).join('、') || '-';
+        const early = parseDaysStr(r.noEarlyDays).join('、') || '-';
+        const late = parseDaysStr(r.noLateDays).join('、') || '-';
+        const ts = r.timestamp ? new Date(r.timestamp).toLocaleString('ja-JP', {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '-';
+        const src = r.source === 'paper' ? ' 📝' : '';
+        return `<tr>
+          <td class="center"><span class="role-badge ${roleClass}">${role || '?'}</span></td>
+          <td>${name}</td>
+          <td class="center">${r.empId}</td>
+          <td class="off">${off}</td>
+          <td class="early">${early}</td>
+          <td class="late">${late}</td>
+          <td style="font-size:0.75rem;">${r.note || ''}</td>
+          <td class="center" style="font-size:0.7rem;color:#666;">${ts}${src}</td>
+          <td class="center"><button class="btn btn-danger" style="padding:3px 8px;font-size:0.7rem;" onclick="deleteRequest('${r.empId}','${r.targetMonth}')">削除</button></td>
+        </tr>`;
+      }).join('');
+    }
+  }
+
+  window.deleteRequest = function(empId, month) {
+    if (!confirm(`社員番号 ${empId} の ${month} のデータを削除しますか?`)) return;
+    const reqs = loadRequests().filter(r => !(r.empId === empId && r.targetMonth === month));
+    saveRequests(reqs);
+    renderAdmin();
+  };
+
+  // ====== 紙組代理入力 ======
+  document.getElementById('addPaperBtn').addEventListener('click', () => {
+    document.getElementById('paperMonth').value = adminMonthEl.value;
+    ['paperEmpId','paperOff','paperEarly','paperLate','paperNote'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('paperModal').classList.add('show');
+  });
+  document.getElementById('paperCancelBtn').addEventListener('click', () => {
+    document.getElementById('paperModal').classList.remove('show');
+  });
+  document.getElementById('paperSaveBtn').addEventListener('click', () => {
+    const empId = document.getElementById('paperEmpId').value.trim();
+    const month = document.getElementById('paperMonth').value;
+    if (!empId || !month) { alert('社員番号と対象月は必須'); return; }
+    const req = {
+      timestamp: new Date().toISOString(),
+      empId, targetMonth: month,
+      offDays: document.getElementById('paperOff').value.trim(),
+      noEarlyDays: document.getElementById('paperEarly').value.trim(),
+      noLateDays: document.getElementById('paperLate').value.trim(),
+      note: document.getElementById('paperNote').value.trim(),
+      source: 'paper'
+    };
+    const reqs = loadRequests();
+    const idx = reqs.findIndex(r => r.empId === empId && r.targetMonth === month);
+    if (idx >= 0) reqs[idx] = req; else reqs.push(req);
+    saveRequests(reqs);
+    document.getElementById('paperModal').classList.remove('show');
+    renderAdmin();
+  });
+
+  // ====== 名簿管理 ======
+  function renderRoster() {
+    const roster = loadRoster();
+    const roleOrder = { SM: 1, AM: 2, ST: 3, Cr: 4 };
+    roster.sort((a, b) => {
+      const oa = roleOrder[a.role] || 99;
+      const ob = roleOrder[b.role] || 99;
+      if (oa !== ob) return oa - ob;
+      return a.name.localeCompare(b.name, 'ja');
+    });
+    const tbody = document.getElementById('rosterBody');
+    if (roster.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" class="center" style="color:#888;">名簿がありません</td></tr>';
+    } else {
+      tbody.innerHTML = roster.map((r, i) => {
+        const roleClass = ['SM','AM','ST','Cr'].includes(r.role) ? `role-${r.role}` : 'role-other';
+        return `<tr>
+          <td class="center">${r.empId}</td>
+          <td>${r.name}</td>
+          <td class="center"><span class="role-badge ${roleClass}">${r.role}</span></td>
+          <td>${r.note || ''}</td>
+          <td class="center"><button class="btn btn-danger" style="padding:3px 8px;font-size:0.7rem;" onclick="deleteRoster(${i})">削除</button></td>
+        </tr>`;
+      }).join('');
+    }
+  }
+
+  window.deleteRoster = function(idx) {
+    const roster = loadRoster();
+    if (!confirm(`${roster[idx].name}(${roster[idx].empId})を名簿から削除しますか?`)) return;
+    roster.splice(idx, 1);
+    saveRoster(roster);
+    renderRoster();
+    renderAdmin();
+  };
+
+  document.getElementById('addRosterBtn').addEventListener('click', () => {
+    ['rosterEmpId','rosterName','rosterNote'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('rosterRole').value = 'Cr';
+    document.getElementById('rosterModal').classList.add('show');
+  });
+  document.getElementById('rosterCancelBtn').addEventListener('click', () => {
+    document.getElementById('rosterModal').classList.remove('show');
+  });
+  document.getElementById('rosterSaveBtn').addEventListener('click', () => {
+    const empId = document.getElementById('rosterEmpId').value.trim();
+    const name = document.getElementById('rosterName').value.trim();
+    const role = document.getElementById('rosterRole').value;
+    const note = document.getElementById('rosterNote').value.trim();
+    if (!empId || !name) { alert('社員番号と氏名は必須'); return; }
+    const roster = loadRoster();
+    const idx = roster.findIndex(r => r.empId === empId);
+    const newEntry = { empId, name, role, note };
+    if (idx >= 0) roster[idx] = newEntry; else roster.push(newEntry);
+    saveRoster(roster);
+    document.getElementById('rosterModal').classList.remove('show');
+    renderRoster();
+    renderAdmin();
+  });
+
+  // 名簿CSVインポート
+  document.getElementById('rosterFile').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const text = await file.text();
+    const rows = parseCSV(text);
+    if (rows.length < 2) return;
+    const header = rows[0].map(h => h.trim());
+    const findCol = (cands) => {
+      for (const c of cands) { const i = header.indexOf(c); if (i >= 0) return i; }
+      return -1;
+    };
+    const idx = {
+      empId: findCol(['社員番号', 'empId']),
+      name: findCol(['氏名', 'name']),
+      role: findCol(['雇用区分', '区分', 'role']),
+      note: findCol(['備考', 'note'])
+    };
+    const newRoster = [];
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      if (!row[idx.empId]) continue;
+      newRoster.push({
+        empId: String(row[idx.empId]).trim(),
+        name: idx.name >= 0 ? String(row[idx.name] || '').trim() : '',
+        role: idx.role >= 0 ? String(row[idx.role] || '').trim() : 'Cr',
+        note: idx.note >= 0 ? String(row[idx.note] || '').trim() : ''
+      });
+    }
+    if (confirm(`${newRoster.length}件の名簿をインポートします。既存の名簿を置き換えますか?\n(キャンセルでマージ)`)) {
+      saveRoster(newRoster);
+    } else {
+      const merged = loadRoster();
+      newRoster.forEach(nr => {
+        const idx = merged.findIndex(m => m.empId === nr.empId);
+        if (idx >= 0) merged[idx] = nr; else merged.push(nr);
+      });
+      saveRoster(merged);
+    }
+    renderRoster();
+    renderAdmin();
+    e.target.value = '';
+  });
+
+  function parseCSV(text) {
+    const rows = []; let row = [], cur = '', inQuote = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i], n = text[i+1];
+      if (inQuote) {
+        if (c === '"' && n === '"') { cur += '"'; i++; }
+        else if (c === '"') inQuote = false;
+        else cur += c;
+      } else {
+        if (c === '"') inQuote = true;
+        else if (c === ',') { row.push(cur); cur = ''; }
+        else if (c === '\n') { row.push(cur); rows.push(row); row = []; cur = ''; }
+        else if (c === '\r') { /* skip */ }
+        else cur += c;
+      }
+    }
+    if (cur || row.length) { row.push(cur); rows.push(row); }
+    return rows;
+  }
+
+  // CSVエクスポート
+  document.getElementById('exportCsvBtn').addEventListener('click', () => {
+    const reqs = getMonthRequests();
+    const header = ['送信日時','社員番号','氏名','雇用区分','対象月','休み希望日','早番不可日','遅番不可日','備考','入力経路'];
+    const lines = [header.map(csvEscape).join(',')];
+    reqs.forEach(r => {
+      const name = getNameFromEmpId(r.empId);
+      const role = getRoleFromEmpId(r.empId);
+      const row = [
+        r.timestamp, r.empId, name, role, r.targetMonth,
+        r.offDays, r.noEarlyDays, r.noLateDays,
+        r.note || '',
+        r.source || ''
+      ].map(csvEscape);
+      lines.push(row.join(','));
+    });
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `shift_requests_${adminMonthEl.value}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  document.getElementById('exportRosterBtn').addEventListener('click', () => {
+    const roster = loadRoster();
+    const lines = [[ '社員番号', '氏名', '雇用区分', '備考' ].map(csvEscape).join(',')];
+    roster.forEach(r => {
+      lines.push([r.empId, r.name, r.role, r.note || ''].map(csvEscape).join(','));
+    });
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `roster.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  // 危険操作
+  document.getElementById('deleteAllBtn').addEventListener('click', () => {
+    if (!confirm('すべての希望データを削除します。よろしいですか?')) return;
+    if (!confirm('本当によろしいですか?この操作は取り消せません。')) return;
+    saveRequests([]);
+    renderAdmin();
+  });
+  document.getElementById('deleteRosterBtn').addEventListener('click', () => {
+    if (!confirm('名簿を全削除します。よろしいですか?')) return;
+    saveRoster([]);
+    renderRoster();
+    renderAdmin();
+  });
+  document.getElementById('changePinBtn').addEventListener('click', () => {
+    pinMode = 'change'; pinChangeStep = 0; pinInput = ''; pinChangeNew = '';
+    updatePinDisplay();
+    document.getElementById('pinError').textContent = '現在のPINを入力';
+    pinModal.classList.add('show');
+  });
+
+  // ====== 初期化 ======
+  syncViewWithTarget();
+</script>
+
+</body>
+</html>
