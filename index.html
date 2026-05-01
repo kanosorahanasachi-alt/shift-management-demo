@@ -7,26 +7,30 @@
   <title>勤務希望収集・半自動シフト作成ツール｜試作デモ</title>
   <style>
     :root {
-      --bg: #f6f7fb;
-      --panel: #ffffff;
-      --panel-soft: #f9fafc;
-      --text: #1f2937;
-      --muted: #6b7280;
-      --line: #d9dee8;
-      --primary: #1d4ed8;
-      --primary-dark: #1e40af;
-      --primary-soft: #e8f0ff;
-      --green: #15803d;
-      --green-soft: #e9f8ef;
-      --amber: #b45309;
-      --amber-soft: #fff4dc;
-      --red: #b91c1c;
-      --red-soft: #fee2e2;
-      --ink: #111827;
-      --shadow: 0 16px 40px rgba(17, 24, 39, 0.08);
-      --radius-lg: 24px;
-      --radius-md: 16px;
-      --radius-sm: 10px;
+      --bg: #0f172a;
+      --bg-soft: #111c33;
+      --panel: #17223a;
+      --panel-soft: #1d2a44;
+      --panel-light: #f8fafc;
+      --text: #e5e7eb;
+      --text-soft: #cbd5e1;
+      --muted: #94a3b8;
+      --line: rgba(148, 163, 184, 0.24);
+      --line-strong: rgba(203, 213, 225, 0.38);
+      --primary: #60a5fa;
+      --primary-strong: #3b82f6;
+      --primary-soft: rgba(96, 165, 250, 0.13);
+      --green: #86efac;
+      --green-soft: rgba(134, 239, 172, 0.12);
+      --amber: #facc15;
+      --amber-soft: rgba(250, 204, 21, 0.13);
+      --red: #fca5a5;
+      --red-soft: rgba(252, 165, 165, 0.13);
+      --ink: #f8fafc;
+      --shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+      --radius-lg: 18px;
+      --radius-md: 12px;
+      --radius-sm: 8px;
     }
 
     * {
@@ -42,8 +46,7 @@
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       color: var(--text);
       background:
-        radial-gradient(circle at top left, rgba(37, 99, 235, 0.10), transparent 34rem),
-        linear-gradient(180deg, #ffffff 0%, var(--bg) 46%, #eef2f7 100%);
+        linear-gradient(180deg, #0b1120 0%, var(--bg) 48%, #0b1120 100%);
       line-height: 1.75;
     }
 
@@ -53,7 +56,7 @@
     }
 
     .page {
-      width: min(1180px, calc(100% - 32px));
+      width: min(1120px, calc(100% - 32px));
       margin: 0 auto;
     }
 
@@ -61,13 +64,13 @@
       position: sticky;
       top: 0;
       z-index: 10;
-      background: rgba(255, 255, 255, 0.88);
-      backdrop-filter: blur(14px);
-      border-bottom: 1px solid rgba(217, 222, 232, 0.9);
+      background: rgba(15, 23, 42, 0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--line);
     }
 
     .topbar-inner {
-      width: min(1180px, calc(100% - 32px));
+      width: min(1120px, calc(100% - 32px));
       margin: 0 auto;
       display: flex;
       align-items: center;
@@ -80,83 +83,82 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      font-weight: 900;
-      letter-spacing: 0.02em;
+      font-weight: 800;
       color: var(--ink);
       white-space: nowrap;
     }
 
     .brand-mark {
-      width: 34px;
-      height: 34px;
-      border-radius: 12px;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
       display: grid;
       place-items: center;
-      color: #fff;
-      background: linear-gradient(135deg, var(--primary), #60a5fa);
+      color: #0f172a;
+      background: #e2e8f0;
       font-weight: 900;
-      box-shadow: 0 10px 24px rgba(37, 99, 235, 0.25);
+      letter-spacing: 0.02em;
     }
 
     .nav {
       display: flex;
-      gap: 8px;
+      gap: 4px;
       align-items: center;
       flex-wrap: wrap;
       justify-content: flex-end;
       font-size: 13px;
-      color: var(--muted);
+      color: var(--text-soft);
     }
 
     .nav a {
       padding: 7px 10px;
-      border-radius: 999px;
+      border-radius: 8px;
     }
 
     .nav a:hover {
-      background: var(--primary-soft);
-      color: var(--primary-dark);
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--ink);
     }
 
     .hero {
-      padding: 48px 0 28px;
+      padding: 42px 0 22px;
     }
 
     .hero-grid {
       display: grid;
-      grid-template-columns: 1.25fr 0.75fr;
-      gap: 24px;
+      grid-template-columns: 1.18fr 0.82fr;
+      gap: 18px;
       align-items: stretch;
     }
 
     .hero-main,
     .hero-side,
     section.card {
-      background: rgba(255, 255, 255, 0.92);
-      border: 1px solid rgba(217, 222, 232, 0.95);
+      background: rgba(23, 34, 58, 0.94);
+      border: 1px solid var(--line);
       border-radius: var(--radius-lg);
       box-shadow: var(--shadow);
     }
 
     .hero-main {
-      padding: 34px;
+      padding: 32px;
       overflow: hidden;
       position: relative;
     }
 
-    .hero-main::after {
+    .hero-main::before {
       content: "";
       position: absolute;
-      width: 300px;
-      height: 300px;
-      right: -160px;
-      bottom: -160px;
-      border-radius: 50%;
-      background: rgba(37, 99, 235, 0.08);
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary), transparent);
+      opacity: 0.9;
     }
 
     .hero-side {
-      padding: 26px;
+      padding: 24px;
     }
 
     .badge-row {
@@ -170,53 +172,52 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 6px 10px;
+      padding: 5px 9px;
       border-radius: 999px;
-      background: var(--panel-soft);
+      background: rgba(255, 255, 255, 0.05);
       border: 1px solid var(--line);
-      color: var(--muted);
+      color: var(--text-soft);
       font-size: 12px;
-      font-weight: 800;
-      letter-spacing: 0.02em;
+      font-weight: 700;
     }
 
     .badge.primary {
       background: var(--primary-soft);
-      color: var(--primary-dark);
-      border-color: #c7d7fe;
+      color: #bfdbfe;
+      border-color: rgba(96, 165, 250, 0.32);
     }
 
     .badge.green {
       background: var(--green-soft);
       color: var(--green);
-      border-color: #b7e4c7;
+      border-color: rgba(134, 239, 172, 0.28);
     }
 
     .badge.amber {
       background: var(--amber-soft);
       color: var(--amber);
-      border-color: #f7d794;
+      border-color: rgba(250, 204, 21, 0.28);
     }
 
     h1 {
       margin: 0;
-      font-size: clamp(31px, 6vw, 58px);
-      line-height: 1.08;
-      letter-spacing: -0.045em;
+      font-size: clamp(30px, 5.2vw, 52px);
+      line-height: 1.12;
+      letter-spacing: -0.035em;
       color: var(--ink);
     }
 
     .lead {
       margin: 20px 0 0;
-      font-size: 17px;
-      color: #374151;
+      font-size: 16px;
+      color: var(--text-soft);
       max-width: 760px;
     }
 
     .hero-actions {
       margin-top: 26px;
       display: flex;
-      gap: 12px;
+      gap: 10px;
       flex-wrap: wrap;
       position: relative;
       z-index: 1;
@@ -228,39 +229,43 @@
       justify-content: center;
       gap: 8px;
       border: 1px solid transparent;
-      border-radius: 999px;
-      padding: 12px 18px;
-      min-height: 46px;
-      font-weight: 900;
+      border-radius: 10px;
+      padding: 11px 16px;
+      min-height: 44px;
+      font-weight: 800;
       cursor: pointer;
-      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+      transition: background 0.12s ease, border-color 0.12s ease, transform 0.12s ease;
       font-size: 14px;
     }
 
     .btn:hover {
       transform: translateY(-1px);
-      box-shadow: 0 10px 22px rgba(17, 24, 39, 0.10);
     }
 
     .btn.primary {
-      color: #fff;
-      background: var(--primary);
+      color: #0f172a;
+      background: #bfdbfe;
+      border-color: #bfdbfe;
+    }
+
+    .btn.primary:hover {
+      background: #dbeafe;
     }
 
     .btn.secondary {
-      color: var(--primary-dark);
-      background: var(--primary-soft);
-      border-color: #c7d7fe;
+      color: #dbeafe;
+      background: rgba(96, 165, 250, 0.12);
+      border-color: rgba(96, 165, 250, 0.4);
     }
 
     .btn.ghost {
-      color: var(--ink);
-      background: #fff;
-      border-color: var(--line);
+      color: var(--text-soft);
+      background: transparent;
+      border-color: var(--line-strong);
     }
 
     .side-title {
-      margin: 0 0 10px;
+      margin: 0 0 12px;
       font-size: 18px;
       color: var(--ink);
     }
@@ -270,7 +275,7 @@
       padding: 0;
       list-style: none;
       display: grid;
-      gap: 10px;
+      gap: 9px;
     }
 
     .side-list li {
@@ -280,16 +285,17 @@
       align-items: start;
       padding: 10px;
       border-radius: var(--radius-sm);
-      background: var(--panel-soft);
-      border: 1px solid #eef1f6;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--line);
+      color: var(--text-soft);
     }
 
     .num {
       width: 30px;
       height: 30px;
-      border-radius: 10px;
-      background: var(--primary-soft);
-      color: var(--primary-dark);
+      border-radius: 8px;
+      background: rgba(226, 232, 240, 0.12);
+      color: #e2e8f0;
       display: grid;
       place-items: center;
       font-weight: 900;
@@ -297,12 +303,12 @@
     }
 
     main {
-      padding: 18px 0 56px;
+      padding: 14px 0 56px;
     }
 
     section.card {
-      padding: 28px;
-      margin-top: 22px;
+      padding: 26px;
+      margin-top: 18px;
     }
 
     .section-head {
@@ -315,60 +321,59 @@
 
     .section-kicker {
       margin: 0 0 4px;
-      color: var(--primary-dark);
+      color: #93c5fd;
       font-size: 12px;
-      font-weight: 900;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
+      font-weight: 800;
+      letter-spacing: 0.08em;
     }
 
     h2 {
       margin: 0;
       color: var(--ink);
-      font-size: clamp(22px, 3vw, 32px);
-      line-height: 1.25;
-      letter-spacing: -0.02em;
+      font-size: clamp(22px, 3vw, 30px);
+      line-height: 1.3;
+      letter-spacing: -0.015em;
     }
 
     .sub {
       margin: 8px 0 0;
       color: var(--muted);
-      max-width: 760px;
+      max-width: 800px;
     }
 
     .demo-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 16px;
+      gap: 14px;
     }
 
     .demo-card {
-      padding: 20px;
-      background: var(--panel-soft);
+      padding: 18px;
+      background: rgba(255, 255, 255, 0.04);
       border: 1px solid var(--line);
       border-radius: var(--radius-md);
       display: flex;
       flex-direction: column;
       gap: 12px;
-      min-height: 260px;
+      min-height: 252px;
     }
 
-    .demo-icon {
-      width: 44px;
-      height: 44px;
-      border-radius: 16px;
-      display: grid;
-      place-items: center;
-      background: #fff;
+    .demo-label {
+      display: inline-flex;
+      width: fit-content;
+      padding: 4px 8px;
+      border-radius: 999px;
       border: 1px solid var(--line);
-      font-size: 22px;
+      color: var(--text-soft);
+      font-size: 12px;
+      font-weight: 800;
     }
 
     .demo-card h3 {
       margin: 0;
       color: var(--ink);
-      font-size: 20px;
-      line-height: 1.35;
+      font-size: 19px;
+      line-height: 1.4;
     }
 
     .demo-card p {
@@ -384,29 +389,29 @@
 
     .notice {
       border-radius: var(--radius-md);
-      padding: 18px;
-      border: 1px solid #f7d794;
+      padding: 16px;
+      border: 1px solid rgba(250, 204, 21, 0.3);
       background: var(--amber-soft);
-      color: #7c3f00;
+      color: #fde68a;
     }
 
     .notice strong {
-      color: #6b3300;
+      color: #fef3c7;
     }
 
     .steps {
       counter-reset: step;
       display: grid;
-      gap: 12px;
+      gap: 10px;
     }
 
     .step {
       display: grid;
-      grid-template-columns: 46px 1fr;
+      grid-template-columns: 42px 1fr;
       gap: 14px;
       align-items: start;
-      padding: 16px;
-      background: var(--panel-soft);
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.04);
       border: 1px solid var(--line);
       border-radius: var(--radius-md);
     }
@@ -414,19 +419,19 @@
     .step::before {
       counter-increment: step;
       content: counter(step);
-      width: 42px;
-      height: 42px;
-      border-radius: 16px;
+      width: 38px;
+      height: 38px;
+      border-radius: 9px;
       display: grid;
       place-items: center;
-      color: #fff;
-      background: var(--primary);
+      color: #0f172a;
+      background: #cbd5e1;
       font-weight: 900;
     }
 
     .step h3 {
       margin: 0 0 4px;
-      font-size: 18px;
+      font-size: 17px;
       color: var(--ink);
     }
 
@@ -439,14 +444,14 @@
     .two-col {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 16px;
+      gap: 14px;
     }
 
     .mini-card {
-      padding: 18px;
+      padding: 17px;
       border: 1px solid var(--line);
       border-radius: var(--radius-md);
-      background: var(--panel-soft);
+      background: rgba(255, 255, 255, 0.04);
     }
 
     .mini-card h3 {
@@ -468,29 +473,29 @@
     .comparison {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 16px;
+      gap: 14px;
     }
 
     .compare-box {
-      padding: 18px;
+      padding: 17px;
       border-radius: var(--radius-md);
       border: 1px solid var(--line);
-      background: var(--panel-soft);
+      background: rgba(255, 255, 255, 0.04);
     }
 
     .compare-box.before {
-      background: #fff8f8;
-      border-color: #fecaca;
+      background: rgba(252, 165, 165, 0.07);
+      border-color: rgba(252, 165, 165, 0.22);
     }
 
     .compare-box.after {
-      background: #f0fdf4;
-      border-color: #bbf7d0;
+      background: rgba(134, 239, 172, 0.07);
+      border-color: rgba(134, 239, 172, 0.22);
     }
 
     .compare-box h3 {
       margin: 0 0 10px;
-      font-size: 20px;
+      font-size: 19px;
     }
 
     .compare-box.before h3 {
@@ -499,6 +504,16 @@
 
     .compare-box.after h3 {
       color: var(--green);
+    }
+
+    .compare-box ul {
+      color: var(--text-soft);
+      margin: 0;
+      padding-left: 1.15em;
+    }
+
+    .compare-box li + li {
+      margin-top: 6px;
     }
 
     .status-grid {
@@ -510,21 +525,21 @@
     .status-card {
       padding: 16px;
       border-radius: var(--radius-md);
-      background: var(--panel-soft);
+      background: rgba(255, 255, 255, 0.04);
       border: 1px solid var(--line);
     }
 
     .status-card .label {
       font-size: 12px;
-      font-weight: 900;
+      font-weight: 800;
       color: var(--muted);
-      letter-spacing: 0.08em;
+      letter-spacing: 0.04em;
     }
 
     .status-card .value {
       margin-top: 8px;
-      font-size: 30px;
-      line-height: 1;
+      font-size: 24px;
+      line-height: 1.15;
       font-weight: 900;
       color: var(--ink);
     }
@@ -551,7 +566,7 @@
       overflow-x: auto;
       border: 1px solid var(--line);
       border-radius: var(--radius-md);
-      background: #fff;
+      background: rgba(255, 255, 255, 0.03);
     }
 
     table {
@@ -565,15 +580,19 @@
     td {
       padding: 12px 14px;
       text-align: left;
-      border-bottom: 1px solid #eef1f6;
+      border-bottom: 1px solid var(--line);
       vertical-align: top;
     }
 
     th {
-      background: #f3f6fb;
+      background: rgba(255, 255, 255, 0.06);
       color: var(--ink);
       font-size: 13px;
       white-space: nowrap;
+    }
+
+    td {
+      color: var(--text-soft);
     }
 
     tr:last-child td {
@@ -588,25 +607,29 @@
       border-radius: 999px;
       font-size: 12px;
       font-weight: 800;
-      background: #eef2ff;
-      color: #3730a3;
+      background: rgba(96, 165, 250, 0.13);
+      color: #bfdbfe;
       margin: 2px 4px 2px 0;
       white-space: nowrap;
+      border: 1px solid rgba(96, 165, 250, 0.24);
     }
 
     .tag.green {
       background: var(--green-soft);
       color: var(--green);
+      border-color: rgba(134, 239, 172, 0.24);
     }
 
     .tag.amber {
       background: var(--amber-soft);
       color: var(--amber);
+      border-color: rgba(250, 204, 21, 0.24);
     }
 
     .tag.red {
       background: var(--red-soft);
       color: var(--red);
+      border-color: rgba(252, 165, 165, 0.24);
     }
 
     .flow {
@@ -621,7 +644,7 @@
       padding: 14px;
       border-radius: var(--radius-md);
       border: 1px solid var(--line);
-      background: var(--panel-soft);
+      background: rgba(255, 255, 255, 0.04);
       position: relative;
     }
 
@@ -656,17 +679,17 @@
     }
 
     .metric {
-      padding: 18px;
+      padding: 17px;
       border-radius: var(--radius-md);
       border: 1px solid var(--line);
-      background: #fff;
+      background: rgba(255, 255, 255, 0.04);
     }
 
     .metric strong {
       display: block;
-      font-size: 28px;
-      line-height: 1;
-      color: var(--primary-dark);
+      font-size: 22px;
+      line-height: 1.2;
+      color: #dbeafe;
     }
 
     .metric span {
@@ -678,17 +701,17 @@
 
     .roadmap {
       display: grid;
-      gap: 12px;
+      gap: 10px;
     }
 
     .roadmap-item {
       display: grid;
-      grid-template-columns: 92px 1fr;
+      grid-template-columns: 88px 1fr;
       gap: 14px;
-      padding: 16px;
+      padding: 15px;
       border-radius: var(--radius-md);
       border: 1px solid var(--line);
-      background: var(--panel-soft);
+      background: rgba(255, 255, 255, 0.04);
       align-items: start;
     }
 
@@ -697,12 +720,13 @@
       justify-content: center;
       align-items: center;
       border-radius: 999px;
-      min-height: 34px;
-      padding: 6px 10px;
+      min-height: 32px;
+      padding: 5px 9px;
       font-size: 13px;
       font-weight: 900;
-      background: var(--primary-soft);
-      color: var(--primary-dark);
+      background: rgba(226, 232, 240, 0.10);
+      color: #e2e8f0;
+      border: 1px solid var(--line);
     }
 
     .roadmap-item h3 {
@@ -734,10 +758,10 @@
     .url-box {
       flex: 1;
       min-width: 0;
-      padding: 11px 12px;
+      padding: 10px 11px;
       border: 1px solid var(--line);
-      border-radius: 12px;
-      background: #fff;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.04);
       color: var(--muted);
       font-size: 13px;
       overflow: hidden;
@@ -746,12 +770,12 @@
     }
 
     .small-button {
-      border: none;
-      border-radius: 12px;
-      padding: 11px 12px;
-      background: var(--primary);
-      color: #fff;
-      font-weight: 900;
+      border: 1px solid rgba(226, 232, 240, 0.24);
+      border-radius: 10px;
+      padding: 10px 12px;
+      background: rgba(226, 232, 240, 0.10);
+      color: var(--ink);
+      font-weight: 800;
       cursor: pointer;
       white-space: nowrap;
     }
@@ -763,14 +787,15 @@
       transform: translateX(-50%) translateY(20px);
       opacity: 0;
       pointer-events: none;
-      background: #111827;
-      color: #fff;
+      background: #e2e8f0;
+      color: #0f172a;
       padding: 10px 14px;
       border-radius: 999px;
-      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
       transition: all 0.18s ease;
       z-index: 99;
       font-size: 14px;
+      font-weight: 800;
     }
 
     .toast.show {
@@ -807,7 +832,7 @@
     @media (max-width: 640px) {
       .page,
       .topbar-inner {
-        width: min(100% - 22px, 1180px);
+        width: min(100% - 22px, 1120px);
       }
 
       .hero {
@@ -818,7 +843,7 @@
       .hero-side,
       section.card {
         padding: 20px;
-        border-radius: 18px;
+        border-radius: 14px;
       }
 
       .hero-actions .btn,
@@ -845,6 +870,7 @@
     @media print {
       body {
         background: #fff;
+        color: #111827;
       }
 
       .topbar,
@@ -869,6 +895,9 @@
       .metric,
       .roadmap-item {
         box-shadow: none;
+        background: #fff !important;
+        color: #111827 !important;
+        border-color: #d1d5db !important;
         break-inside: avoid;
       }
 
@@ -882,13 +911,13 @@
   <header class="topbar">
     <div class="topbar-inner">
       <a class="brand" href="#top" aria-label="トップへ戻る">
-        <span class="brand-mark">S</span>
-        <span>Shift Demo</span>
+        <span class="brand-mark">試</span>
+        <span>シフト作成補助 試作版</span>
       </a>
       <nav class="nav" aria-label="ページ内メニュー">
-        <a href="#demo">デモ入口</a>
-        <a href="#guide">触り方</a>
-        <a href="#checks">チェック</a>
+        <a href="#demo">試作版を見る</a>
+        <a href="#guide">確認手順</a>
+        <a href="#checks">確認項目</a>
         <a href="#flow">実務フロー</a>
         <a href="#risk">実務化</a>
       </nav>
@@ -900,29 +929,29 @@
       <div class="hero-grid">
         <div class="hero-main">
           <div class="badge-row">
-            <span class="badge primary">DEMO ENV</span>
+            <span class="badge primary">試作デモ</span>
             <span class="badge green">サンプルデータのみ</span>
-            <span class="badge amber">正式運用前の検証版</span>
+            <span class="badge amber">正式運用前の確認用</span>
           </div>
-          <h1>勤務希望収集・<br />半自動シフト作成ツール</h1>
+          <h1>勤務希望収集と<br />仮シフト作成の補助ツール</h1>
           <p class="lead">
-            紙ベースのシフト希望提出、提出状況の確認、希望休・有休・勤務不可・役割者配置・連勤・勤務間インターバルなどの確認作業を、仕組みで補助するための試作デモです。
-            完全自動で確定するものではなく、シフト作成者が最終確認・修正する前提の「仮シフト作成支援ツール」です。
+            紙ベースのシフト希望提出、提出状況の確認、希望休・有休・勤務不可・役割者配置・連勤・勤務間インターバルなどの確認作業を、仕組みで補助できないかを確認するための試作版です。
+            完全自動でシフトを確定させるものではなく、シフト作成者が最終確認・修正する前提です。
           </p>
           <div class="hero-actions">
-            <a class="btn primary" href="#demo">まずデモを開く</a>
-            <a class="btn secondary" href="#guide">触り方を見る</a>
-            <a class="btn ghost" href="#risk">実務化の考え方</a>
+            <a class="btn primary" href="#demo">試作版を見る</a>
+            <a class="btn secondary" href="#guide">確認手順を見る</a>
+            <a class="btn ghost" href="#risk">実務化の注意点</a>
           </div>
         </div>
 
         <aside class="hero-side" aria-label="この試作版で確認できること">
-          <h2 class="side-title">この試作で見てほしいこと</h2>
+          <h2 class="side-title">確認していただきたい点</h2>
           <ol class="side-list">
             <li><span class="num">1</span><span>従業員がスマホ・PCから希望を入力できるか。</span></li>
             <li><span class="num">2</span><span>提出済み・未提出を管理者が把握しやすいか。</span></li>
             <li><span class="num">3</span><span>希望休・有休・勤務不可を守った仮シフトになっているか。</span></li>
-            <li><span class="num">4</span><span>AM・金銭キー・必要人数・イベントを考慮できそうか。</span></li>
+            <li><span class="num">4</span><span>AM・金銭キー・必要人数・日別イベントを考慮できそうか。</span></li>
           </ol>
           <div class="copy-row" aria-label="デモURLコピー">
             <div class="url-box" id="demoUrl">https://kanosorahanasachi-alt.github.io/shift-management-demo/</div>
@@ -936,30 +965,30 @@
       <section class="card" id="demo">
         <div class="section-head">
           <div>
-            <p class="section-kicker">Demo Entrance</p>
-            <h2>3つのデモ入口</h2>
-            <p class="sub">まずは従業員側、次に管理者側、最後に印刷用シフト表の順で確認すると、全体の流れが分かりやすくなります。</p>
+            <p class="section-kicker">試作版の入口</p>
+            <h2>3つの画面で流れを確認できます</h2>
+            <p class="sub">従業員側、管理者側、掲示・印刷用の順で確認すると、勤務希望の提出から仮シフト作成までの流れが分かりやすくなります。</p>
           </div>
         </div>
 
         <div class="demo-grid">
           <article class="demo-card">
-            <div class="demo-icon">📱</div>
-            <h3>Staff<br />スマホ希望入力デモ</h3>
+            <span class="demo-label">従業員側</span>
+            <h3>スマホ希望入力デモ</h3>
             <p>従業員が自分の端末から勤務希望を入力する画面です。紙で提出した内容を本人が忘れる問題や、提出状況の確認負担を減らすことを想定しています。</p>
             <a class="btn primary" href="shift_request_demo_15staff.html">従業員用デモを開く</a>
           </article>
 
           <article class="demo-card">
-            <div class="demo-icon">⚙️</div>
-            <h3>Admin<br />仮シフト自動生成デモ</h3>
+            <span class="demo-label">管理者側</span>
+            <h3>仮シフト自動生成デモ</h3>
             <p>管理者が希望データを確認し、必要人数・AM・金銭キー・連勤・勤務間インターバルなどを考慮しながら仮シフトを作成する画面です。</p>
             <a class="btn primary" href="shift_auto_generate_demo_v3_logic.html">管理者用デモを開く</a>
           </article>
 
           <article class="demo-card">
-            <div class="demo-icon">🖨️</div>
-            <h3>Print<br />掲示・印刷用シフト表デモ</h3>
+            <span class="demo-label">掲示・印刷</span>
+            <h3>掲示・印刷用シフト表デモ</h3>
             <p>完成したシフトを掲示・印刷しやすい形で確認する画面です。既存Excel運用やA3横印刷に近い見え方を意識しています。</p>
             <a class="btn primary" href="shift_print_preview_color_demo.html">印刷用デモを開く</a>
           </article>
@@ -969,9 +998,9 @@
       <section class="card" id="guide">
         <div class="section-head">
           <div>
-            <p class="section-kicker">How To Try</p>
-            <h2>迷わず触るための確認手順</h2>
-            <p class="sub">デモを見る方には、細かい説明よりも「どこを押せばよいか」が先に必要です。以下の順番で触ると、試作版の意図が伝わりやすくなります。</p>
+            <p class="section-kicker">確認手順</p>
+            <h2>まずはこの順番で確認してください</h2>
+            <p class="sub">細かい説明よりも、最初にどこを押して何を見ればよいかが分かるようにしています。</p>
           </div>
         </div>
 
@@ -1012,15 +1041,15 @@
       <section class="card">
         <div class="section-head">
           <div>
-            <p class="section-kicker">Before / After</p>
-            <h2>現状の負担と改善後のイメージ</h2>
-            <p class="sub">この試作版の価値は、単にシフト表を作ることではなく、毎月発生する確認・転記・判断の負担を減らすことです。</p>
+            <p class="section-kicker">現状と改善後のイメージ</p>
+            <h2>毎月発生する確認・転記・判断の負担を減らす</h2>
+            <p class="sub">この試作版の目的は、シフト作成を人の判断から切り離すことではなく、確認漏れや転記負担を減らし、最終判断をしやすくすることです。</p>
           </div>
         </div>
 
         <div class="comparison">
           <div class="compare-box before">
-            <h3>Before：紙・目視・経験依存</h3>
+            <h3>現状：紙・目視・経験依存</h3>
             <ul>
               <li>紙で希望を提出するため、本人が提出内容を忘れやすい。</li>
               <li>提出済み・未提出の確認に手間がかかる。</li>
@@ -1030,7 +1059,7 @@
             </ul>
           </div>
           <div class="compare-box after">
-            <h3>After：入力・一覧・自動チェック</h3>
+            <h3>改善後：入力・一覧・自動チェック</h3>
             <ul>
               <li>スマホまたはPCから希望を入力できる。</li>
               <li>提出済み・未提出を一覧で確認できる。</li>
@@ -1045,9 +1074,9 @@
       <section class="card" id="checks">
         <div class="section-head">
           <div>
-            <p class="section-kicker">Auto Check</p>
-            <h2>自動生成後に見える化したいチェック結果</h2>
-            <p class="sub">仮シフトの良し悪しは、表だけでは分かりにくいです。作成後に「守れた条件」「不足している条件」「人の修正が必要な箇所」を表示することで、実務で使いやすくなります。</p>
+            <p class="section-kicker">確認項目</p>
+            <h2>仮シフト作成後に見える化したい内容</h2>
+            <p class="sub">仮シフトの良し悪しは、表だけでは分かりにくいため、「守れた条件」「不足している条件」「人の修正が必要な箇所」を確認できる形にします。</p>
           </div>
         </div>
 
@@ -1078,9 +1107,9 @@
       <section class="card">
         <div class="section-head">
           <div>
-            <p class="section-kicker">Sample Staff</p>
-            <h2>サンプル社員の役割イメージ</h2>
-            <p class="sub">実名は使わず、役割や勤務可能条件だけをサンプル化することで、現場の人が「自店に置き換えたらどうなるか」を想像しやすくします。</p>
+            <p class="section-kicker">サンプル条件</p>
+            <h2>社員番号と役割のイメージ</h2>
+            <p class="sub">実名は使わず、役割や勤務可能条件だけをサンプル化することで、自店に置き換えた場合のイメージを確認しやすくします。</p>
           </div>
         </div>
 
@@ -1133,7 +1162,7 @@
       <section class="card">
         <div class="section-head">
           <div>
-            <p class="section-kicker">Rules</p>
+            <p class="section-kicker">条件整理</p>
             <h2>必須条件と優先条件を分ける</h2>
             <p class="sub">自動生成ロジックを実務に近づけるには、「絶対に破ってはいけない条件」と「できれば守りたい条件」を分ける必要があります。</p>
           </div>
@@ -1168,8 +1197,8 @@
       <section class="card">
         <div class="section-head">
           <div>
-            <p class="section-kicker">Events</p>
-            <h2>日別イベントをシフト条件に反映する</h2>
+            <p class="section-kicker">日別イベント</p>
+            <h2>通常日と異なる条件を反映する</h2>
             <p class="sub">通常日と違う業務がある日は、必要人数や勤務時間帯を補正する必要があります。イベント登録によって、経験則を仕組みに落とし込みやすくします。</p>
           </div>
         </div>
@@ -1212,7 +1241,7 @@
       <section class="card" id="flow">
         <div class="section-head">
           <div>
-            <p class="section-kicker">Operation Flow</p>
+            <p class="section-kicker">実務フロー</p>
             <h2>実務で使う場合の流れ</h2>
             <p class="sub">いきなり全自動システムにするのではなく、現在の運用を大きく変えずに、確認作業と仮シフト作成を補助する形が現実的です。</p>
           </div>
@@ -1231,8 +1260,8 @@
       <section class="card">
         <div class="section-head">
           <div>
-            <p class="section-kicker">Impact</p>
-            <h2>効果イメージ</h2>
+            <p class="section-kicker">期待できる効果</p>
+            <h2>小さな負担を継続的に減らす</h2>
             <p class="sub">大きな設備投資や大幅な人員削減ではなく、毎月繰り返される小さな負担を減らすことを狙います。</p>
           </div>
         </div>
@@ -1241,15 +1270,15 @@
           <div class="metric"><strong>提出確認</strong><span>紙の確認・転記・未提出確認の負担を軽減。</span></div>
           <div class="metric"><strong>条件確認</strong><span>希望休・有休・勤務不可・役割者不足を見える化。</span></div>
           <div class="metric"><strong>品質平準化</strong><span>担当者ごとの判断のばらつきを減らす。</span></div>
-          <div class="metric"><strong>400店舗</strong><span>1店舗あたり月1時間削減でも、全店では大きな改善余地。</span></div>
+          <div class="metric"><strong>全店展開時</strong><span>仮に1店舗あたり月1時間でも削減できれば、全体では大きな改善余地。</span></div>
         </div>
       </section>
 
       <section class="card" id="risk">
         <div class="section-head">
           <div>
-            <p class="section-kicker">Safety / Operation</p>
-            <h2>実務化する場合の確認事項</h2>
+            <p class="section-kicker">実務化する場合</p>
+            <h2>会社管理環境での検証が必要です</h2>
             <p class="sub">このデモは個人作成の試作版です。正式導入する場合は、会社管理環境での検証・権限管理・個人情報管理が必要です。</p>
           </div>
         </div>
@@ -1285,8 +1314,8 @@
       <section class="card">
         <div class="section-head">
           <div>
-            <p class="section-kicker">Roadmap</p>
-            <h2>今後の改善優先度</h2>
+            <p class="section-kicker">今後の改善案</p>
+            <h2>段階的に試作レベルを上げる</h2>
             <p class="sub">次にレベルを上げるなら、機能追加よりも先に「見た人が迷わず触れる導線」と「結果の分かりやすさ」を整えるのが効果的です。</p>
           </div>
         </div>
@@ -1295,21 +1324,21 @@
           <div class="roadmap-item">
             <span class="priority">優先A</span>
             <div>
-              <h3>トップ導線・触り方ガイド・チェック結果の強化</h3>
+              <h3>トップ導線・確認手順・チェック結果の強化</h3>
               <p>デモを開いた人が、どの順番で何を確認すればよいか分かるようにします。</p>
             </div>
           </div>
           <div class="roadmap-item">
             <span class="priority">優先B</span>
             <div>
-              <h3>Before / After・効果イメージの追加</h3>
+              <h3>現状と改善後の比較・効果イメージの追加</h3>
               <p>紙運用からデジタル補助に変わることで、何が楽になるのかを一目で伝えます。</p>
             </div>
           </div>
           <div class="roadmap-item">
             <span class="priority">優先C</span>
             <div>
-              <h3>自動生成理由・スコア・手修正後再チェック</h3>
+              <h3>自動生成理由・手修正後の再チェック</h3>
               <p>なぜその配置になったか、どこを直せばよいかを見える化します。</p>
             </div>
           </div>
