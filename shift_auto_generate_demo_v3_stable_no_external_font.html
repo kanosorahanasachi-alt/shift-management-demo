@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>仮シフト自動生成 | 管理者デモ</title>
+<style>
+:root{
+  --bg:#f0f2f5;--surface:#ffffff;--surface2:#f4f6f9;--surface3:#eaecf2;
+  --border:#d0d5e2;--border2:#b8bdd0;
+  --accent:#1a4d8f;--accent2:#0f7a55;--accent3:#8a5a00;
+  --text:#1a1e2e;--text-muted:#4a5270;--text-dim:#8a90a8;
+  --warn:#b91c1c;
+  --early-bg:#dbeafe;--early-text:#1e3a6e;--early-border:#93c5fd;
+  --middle-bg:#fef9c3;--middle-text:#713f12;--middle-border:#fde047;
+  --late-bg:#fee2e2;--late-text:#7f1d1d;--late-border:#fca5a5;
+  --co-bg:#ffedd5;--co-text:#7c2d12;--co-border:#fdba74;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Yu Gothic","Meiryo",system-ui,sans-serif;font-weight:400;background:var(--bg);color:var(--text);min-height:100vh}
+.app{padding:14px}
+.header{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin-bottom:10px;display:flex;justify-content:space-between;gap:12px;align-items:center;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.page-badge{display:inline-flex;align-items:center;gap:6px;background:#e8f0fc;border:1px solid #b0c8f0;border-radius:4px;padding:3px 10px;font-size:10px;font-family:Consolas,"Courier New",monospace;color:var(--accent);letter-spacing:.08em;margin-bottom:8px}
+.page-badge::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.header h1{margin:0 0 4px;font-size:20px;font-weight:700;letter-spacing:-.02em;color:var(--text)}
+.header h1 span{color:var(--accent)}
+.header p{margin:0;font-size:12px;color:var(--text-muted);line-height:1.6}
+.header-meta{background:#e8f5ee;border:1px solid #a7d9be;border-radius:8px;padding:10px 14px;font-weight:700;font-size:12px;font-family:Consolas,"Courier New",monospace;color:var(--accent2);white-space:nowrap;text-align:center;line-height:1.8}
+.toolbar{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+button{border:1px solid var(--border2);background:var(--surface2);color:var(--text-muted);padding:8px 14px;border-radius:7px;cursor:pointer;font-weight:700;font-size:13px;font-family:"Yu Gothic","Meiryo",system-ui,sans-serif;transition:all .15s}
+button:hover{border-color:var(--accent);color:var(--accent);background:#e8f0fc}
+button.primary{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 2px 6px rgba(26,77,143,.25)}
+button.primary:hover{background:#163f78;border-color:#163f78}
+button.danger{background:#fef2f2;color:var(--warn);border-color:#fca5a5}
+button.danger:hover{background:#fee2e2}
+button.success{background:#e8f5ee;color:var(--accent2);border-color:#a7d9be}
+.status-cards{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:10px}
+.status-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.status-card .label{font-size:11px;color:var(--text-muted);font-weight:700}
+.status-card .num{font-size:22px;font-weight:900;margin-top:4px;font-family:Consolas,"Courier New",monospace}
+.blue .num{color:#1a4d8f}.green .num{color:#0f7a55}.red .num{color:#b91c1c}.orange .num{color:#8a5a00}.purple .num{color:#6d28d9}.gray .num{color:var(--text-muted)}
+.logic-panel{display:grid;grid-template-columns:1.05fr 1fr;gap:10px;margin-bottom:10px}
+.logic-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.logic-box h2{margin:0 0 10px;font-size:12px;font-weight:700;color:var(--accent);font-family:Consolas,"Courier New",monospace;letter-spacing:.08em;text-transform:uppercase;border-left:3px solid var(--accent);padding-left:8px}
+.logic-list{margin:0;padding-left:18px;font-size:12px;line-height:1.8;color:var(--text-muted)}
+.logic-list li::marker{color:var(--accent)}
+.note{background:#fffbeb;border:1px solid #fde68a;border-left:4px solid #f59e0b;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:12px;line-height:1.6;color:#78350f}
+.note strong{color:#92400e}
+.sheet-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:auto;max-height:72vh;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+table.shift-sheet{border-collapse:collapse;width:max-content;min-width:100%;font-size:11px}
+.shift-sheet th,.shift-sheet td{border:1px solid #cbd5e1;text-align:center;vertical-align:middle;padding:2px}
+.store-cell{min-width:220px;text-align:left!important;font-weight:700;font-size:13px;background:#f1f5fb;position:sticky;left:0;z-index:6;color:var(--text);padding-left:10px!important;border-right:2px solid var(--border2)!important}
+.summary-label{min-width:110px;position:sticky;left:0;z-index:5;background:#f1f5fb;font-weight:700;color:var(--text-muted);font-size:11px;padding-left:8px!important;text-align:left!important;border-right:2px solid var(--border2)!important}
+.summary-total-label{min-width:28px;background:var(--surface3);font-weight:700;color:var(--text-dim)}
+.summary-total{min-width:60px;background:var(--surface3);font-weight:700;font-family:Consolas,"Courier New",monospace}
+.day-col{min-width:52px;width:52px}
+.week-start{border-left:3px solid #6b7280!important}
+.event-row td{height:30px;background:#fefce8;color:#854d0e;font-weight:700;font-size:11px}
+.date-head{background:#f1f5fb;font-weight:700;position:sticky;top:0;z-index:4;color:var(--text-muted);font-size:11px}
+.date-head.sunday{color:#b91c1c;background:#fff1f2}
+.date-head.saturday{color:#1d4ed8;background:#eff6ff}
+.staff-head{min-width:160px;position:sticky;left:0;z-index:6;background:#f1f5fb;font-weight:700;color:var(--text-muted);text-align:left!important;padding-left:8px!important;border-right:2px solid var(--border2)!important}
+.staff-info-head{min-width:100px;background:#f1f5fb;font-weight:700;color:var(--text-muted)}
+.staff-name{position:sticky;left:0;z-index:3;background:var(--surface);text-align:left!important;font-weight:700;padding-left:8px!important;min-width:160px;color:var(--text);border-right:2px solid var(--border2)!important}
+.staff-sub{font-size:10px;font-weight:400;color:var(--text-dim);margin-top:3px;display:flex;justify-content:space-between;gap:4px;font-family:Consolas,"Courier New",monospace}
+.staff-meta{font-weight:700;min-width:100px;background:var(--surface3);color:var(--text-muted);font-size:10px}
+.shift-cell{height:46px;font-weight:700;position:relative;cursor:pointer;transition:outline .1s}
+.shift-cell:hover{outline:2px solid var(--accent);outline-offset:-2px}
+.shift-early{background:var(--early-bg);color:var(--early-text);border-bottom:2px solid var(--early-border)!important}
+.shift-middle{background:var(--middle-bg);color:var(--middle-text);border-bottom:2px solid var(--middle-border)!important}
+.shift-late{background:var(--late-bg);color:var(--late-text);border-bottom:2px solid var(--late-border)!important}
+.shift-changeover{background:var(--co-bg);color:var(--co-text);border-bottom:2px solid var(--co-border)!important}
+.shift-off,.shift-request-off,.shift-paid{background:#fff;color:#9ca3af}
+.shift-unavailable{background:#f9fafb;color:#d1d5db}
+.shift-excluded{background:#f3f4f6;color:#d1d5db}
+.time-two-lines{line-height:1.2;font-size:11px;font-weight:700}
+.circle-mark{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border:1.5px solid #cbd5e1;border-radius:50%;font-weight:700;font-size:11px;background:#fff;color:#6b7280}
+.tag-mini{position:absolute;right:2px;bottom:2px;font-size:8px;line-height:1;padding:1px 3px;border-radius:3px;font-weight:700;font-family:Consolas,"Courier New",monospace}
+.tag-request{background:#dc2626;color:#fff}
+.tag-block{background:#2563eb;color:#fff}
+.tag-role{background:#059669;color:#fff}
+.tag-auto-rest{background:#7c3aed;color:#fff}
+.tag-manual{background:#6b7280;color:#fff}
+.tag-error{background:#dc2626;color:#fff}
+.violation{outline:2px solid #dc2626!important;outline-offset:-2px}
+.surplus{background:#dcfce7!important;color:#14532d!important;font-weight:700}
+.shortage{background:#fee2e2!important;color:#7f1d1d!important;font-weight:700}
+.exact{background:#f0fdf4!important;color:#166534!important}
+.legend{margin-top:10px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;display:flex;gap:12px;flex-wrap:wrap;font-size:11px;font-weight:700;color:var(--text-muted);box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.legend-item{display:inline-flex;align-items:center;gap:5px}
+.legend-box{width:22px;height:14px;border:1px solid var(--border);border-radius:3px}
+.quick-menu{position:fixed;z-index:9999;background:var(--surface);border:1px solid var(--border2);border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.15);padding:10px;display:none;width:220px}
+.quick-menu-title{font-size:11px;font-weight:700;color:var(--text-muted);font-family:Consolas,"Courier New",monospace;margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:6px}
+.quick-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+.quick-grid button{padding:7px 4px;font-size:12px}
+.quick-menu .close-btn{width:100%;margin-top:6px}
+@media(max-width:1100px){.status-cards{grid-template-columns:repeat(2,1fr)}.logic-panel{grid-template-columns:1fr}.header{flex-direction:column;align-items:flex-start}}
+@media print{.toolbar,.note,.logic-panel,.legend{display:none}body{background:#fff}.app{padding:0}.sheet-wrap{max-height:none;overflow:visible;border:none;box-shadow:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div>
+      <div class="page-badge">ADMIN / 仮シフト自動生成デモ</div>
+      <h1>仮シフト<span>自動生成</span>管理画面 v3</h1>
+      <p>最大4連勤・目標20日・AM/金銭キー先行配置・3〜4勤ブロック優先ロジック</p>
+    </div>
+    <div class="header-meta">2026年5月<br>サンプル店舗<br>デモ社員15名</div>
+  </div>
+
+  <div class="toolbar">
+    <button class="primary" onclick="generateShift()">▶ 仮シフトを自動生成</button>
+    <button class="success" onclick="generateShift()">サンプルを表示</button>
+    <button class="danger"  onclick="clearGenerated()">✕ 自動生成分クリア</button>
+    <button onclick="downloadCsv()">↓ 会社Excel用CSV</button>
+    <button onclick="window.print()">🖨 A3横で印刷</button>
+  </div>
+
+  <div class="status-cards">
+    <div class="status-card blue">  <div class="label">登録人数</div>   <div class="num">15名</div></div>
+    <div class="status-card gray">  <div class="label">自動生成対象</div><div class="num">13名</div></div>
+    <div class="status-card green"> <div class="label">平均勤務日数</div><div class="num" id="avgWorkDays">--</div></div>
+    <div class="status-card purple"><div class="label">3〜4勤ブロック率</div><div class="num" id="blockRate">--</div></div>
+    <div class="status-card orange"><div class="label">必要人数充足</div><div class="num" id="coverageRate">--</div></div>
+    <div class="status-card green"> <div class="label">役割条件充足</div><div class="num" id="roleRate">--</div></div>
+    <div class="status-card red">   <div class="label">重大エラー</div>  <div class="num" id="errorCount">--</div></div>
+  </div>
+
+  <div class="logic-panel">
+    <div class="logic-box">
+      <h2>自動生成ロジック v3</h2>
+      <ol class="logic-list">
+        <li>希望休・有休・勤務不可・自動生成対象外を先に固定</li>
+        <li>候補除外：最大4連勤超過、11時間未満インターバル、入替不可、必要人数0</li>
+        <li>勤務区分ごとに AM → 金銭キー → 一般枠 の順で配置</li>
+        <li>目標勤務数20日前後。足りない人を加点、超過者を減点</li>
+        <li>3〜4勤→1〜2休、同じ勤務区分の連続をスコア加点</li>
+        <li>入替勤務の翌日は自動休みとして固定</li>
+      </ol>
+    </div>
+    <div class="logic-box">
+      <h2>生成結果チェック</h2>
+      <ul class="logic-list" id="warningList"><li>まだ自動生成されていません。</li></ul>
+    </div>
+  </div>
+
+  <div class="note"><strong>変更点：</strong>前版より必要人数を増やし、平均20日前後で勤務が入るように調整。最大4連勤を候補除外条件にしたため、5勤以上は重大エラーとして検出され、原則生成されません。外部フォント読み込みを削除し、PC標準フォントで表示する安定版です。</div>
+
+  <div class="sheet-wrap"><table class="shift-sheet"><tbody id="sheetBody"></tbody></table></div>
+
+  <div class="legend">
+    <span class="legend-item"><span class="legend-box shift-early"></span>早番 8:00-17:00</span>
+    <span class="legend-item"><span class="legend-box shift-middle"></span>中番 11:00-20:00</span>
+    <span class="legend-item"><span class="legend-box shift-late"></span>遅番 14:00-23:00</span>
+    <span class="legend-item"><span class="legend-box shift-changeover"></span>入替 20:00-29:00</span>
+    <span class="legend-item"><span class="circle-mark" style="width:18px;height:18px;font-size:9px;">公</span>公休</span>
+    <span class="legend-item"><span class="circle-mark" style="width:18px;height:18px;font-size:9px;">希</span>希望休</span>
+    <span class="legend-item"><span class="circle-mark" style="width:18px;height:18px;font-size:9px;">有</span>有休</span>
+    <span class="legend-item"><span class="circle-mark" style="width:18px;height:18px;font-size:9px;">不</span>不可</span>
+    <span class="legend-item"><span class="tag-mini tag-block" style="position:static;">ブロック</span>3〜4勤ブロック</span>
+    <span class="legend-item"><span class="tag-mini tag-role"  style="position:static;">役</span>AM/金銭キー</span>
+    <span class="legend-item"><span class="tag-mini tag-auto-rest" style="position:static;">翌休</span>入替翌日</span>
+  </div>
+
+  <div class="quick-menu" id="quickMenu">
+    <div class="quick-menu-title" id="quickTitle">セル編集</div>
+    <div class="quick-grid">
+      <button onclick="changeSelectedShift('early')">早番</button>
+      <button onclick="changeSelectedShift('middle')">中番</button>
+      <button onclick="changeSelectedShift('late')">遅番</button>
+      <button onclick="changeSelectedShift('changeover')">入替</button>
+      <button onclick="changeSelectedShift('off')">公休</button>
+      <button onclick="changeSelectedShift('requestOff')">希望休</button>
+      <button onclick="changeSelectedShift('paid')">有休</button>
+      <button onclick="changeSelectedShift('blank')">空白</button>
+    </div>
+    <button class="close-btn" onclick="hideQuickMenu()">閉じる</button>
+  </div>
+</div>
+
+<script>
+const days=Array.from({length:31},(_,i)=>i+1);
+const MAX_CONSEC=4,TARGET_WORK=20,TARGET_MIN=18,TARGET_MAX=21,MIN_INTERVAL_HOURS=11;
+// 再現性のある擬似乱数（XorShift32）。generateShiftのたびにDate.now()でシード更新 → 毎回異なるパターン
+let _seed=Date.now();
+function seededRandom(){_seed^=_seed<<13;_seed^=_seed>>17;_seed^=_seed<<5;return(_seed>>>0)/4294967296}
+const events={1:"ポケ",8:"検査",15:"入替",22:"ファン感",29:"店別"};
+const shiftDefs={
+  early:{label:"早",className:"shift-early",start:"08:00",end:"17:00",order:1},
+  middle:{label:"中",className:"shift-middle",start:"11:00",end:"20:00",order:2},
+  late:{label:"遅",className:"shift-late",start:"14:00",end:"23:00",order:3},
+  changeover:{label:"入替",className:"shift-changeover",start:"20:00",end:"29:00",order:4},
+  off:{label:"公",className:"shift-off"},
+  requestOff:{label:"希",className:"shift-request-off"},
+  paid:{label:"有",className:"shift-paid"},
+  unavailable:{label:"不",className:"shift-unavailable"},
+  excluded:{label:"外",className:"shift-excluded"},
+  blank:{label:"",className:"shift-off"}
+};
+
+const staffList=[
+  {id:"1001",name:"山田 太郎",  role:"SM",auto:false,am:true, key:true, changeover:true, target:0, pref:"early"},
+  {id:"1002",name:"佐藤 花子",  role:"SM",auto:false,am:true, key:true, changeover:true, target:0, pref:"late"},
+  {id:"1003",name:"鈴木 一郎",  role:"AM",auto:true, am:true, key:true, changeover:true, target:20,pref:"middle"},
+  {id:"1004",name:"田中 美咲",  role:"AM",auto:true, am:true, key:true, changeover:false,target:20,pref:"early"},
+  {id:"1005",name:"中村 健二",  role:"AM",auto:true, am:true, key:true, changeover:true, target:20,pref:"late"},
+  {id:"1006",name:"小林さくら", role:"AM",auto:true, am:true, key:true, changeover:false,target:20,pref:"middle"},
+  {id:"1007",name:"加藤 大輔",  role:"Cr",auto:true, am:false,key:true, changeover:true, target:20,pref:"early"},
+  {id:"1008",name:"渡辺 陽子",  role:"Cr",auto:true, am:false,key:true, changeover:false,target:20,pref:"late"},
+  {id:"1009",name:"伊藤 翔",    role:"Cr",auto:true, am:false,key:false,changeover:true, target:20,pref:"middle"},
+  {id:"1010",name:"山本 奈々",  role:"Cr",auto:true, am:false,key:false,changeover:false,target:20,pref:"early"},
+  {id:"1011",name:"松田 健太",  role:"Cr",auto:true, am:false,key:true, changeover:false,target:20,pref:"late"},
+  {id:"1012",name:"木村あかり", role:"Cr",auto:true, am:false,key:false,changeover:false,target:20,pref:"middle"},
+  {id:"1013",name:"林 大地",    role:"Cr",auto:true, am:false,key:false,changeover:true, target:20,pref:"early"},
+  {id:"1014",name:"清水 沙織",  role:"Cr",auto:true, am:false,key:true, changeover:false,target:20,pref:"late"},
+  {id:"1015",name:"岡田 雄太",  role:"Cr",auto:true, am:false,key:false,changeover:false,target:20,pref:"middle"}
+];
+
+const requestMap={
+  "1003":{off:[2,9,16,23,30],paid:[],unavailable:[],early:[7,14,21],late:[]},
+  "1004":{off:[1,8,15,22,29],paid:[],unavailable:[],early:[],late:[6,20]},
+  "1005":{off:[5,12,19,26],paid:[],unavailable:[],early:[3,17],late:[10,24]},
+  "1006":{off:[6,13,20,27],paid:[],unavailable:[],early:[1,2],late:[15]},
+  "1007":{off:[3,11,28],paid:[21],unavailable:[],early:[7,22],late:[12,13]},
+  "1008":{off:[4,10,18,25],paid:[],unavailable:[],early:[8,9],late:[16,17]},
+  "1009":{off:[1,14,15,29],paid:[],unavailable:[],early:[5,6],late:[20,21]},
+  "1010":{off:[2,7,16,30],paid:[],unavailable:[],early:[11,12],late:[23,24]},
+  "1011":{off:[6,13,22,27],paid:[],unavailable:[],early:[4,5],late:[14,28]},
+  "1012":{off:[9,10,19,20],paid:[],unavailable:[],early:[1,8],late:[25,26]},
+  "1013":{off:[4,11,18,25],paid:[],unavailable:[],early:[2,3],late:[17,31]},
+  "1014":{off:[5,12,19,26],paid:[],unavailable:[],early:[9,10],late:[23]},
+  "1015":{off:[7,14,21,28],paid:[],unavailable:[],early:[15],late:[1,2]}
+};
+
+function buildReq(){const req={};days.forEach(day=>{const dow=new Date(2026,4,day).getDay();const wk=dow===0||dow===6;const ev=[1,8,15,22,29].includes(day);req[day]={early:{required:wk||ev?4:4,minAM:1,minKey:1},late:{required:wk||ev?4:4,minAM:1,minKey:1},middle:{required:wk||ev?2:1,minAM:0,minKey:0},changeover:{required:day===15?2:(day===29?1:0),minAM:0,minKey:0}}});return req}
+const requirements=buildReq();
+let shiftMatrix={},cellTags={},errors=[],unfilled=[],selectedCell=null,generated=false;
+
+function initMatrix(){shiftMatrix={};cellTags={};errors=[];unfilled=[];staffList.forEach(st=>{shiftMatrix[st.id]={};cellTags[st.id]={};days.forEach(day=>{shiftMatrix[st.id][day]="blank";cellTags[st.id][day]=[]})})}
+function addTag(id,day,tag){if(!cellTags[id][day].includes(tag))cellTags[id][day].push(tag)}
+function isWork(s){return["early","middle","late","changeover"].includes(s)}
+function reqObj(id){return requestMap[id]||{off:[],paid:[],unavailable:[],early:[],late:[]}}
+function has(arr,id,day){return(reqObj(id)[arr]||[]).includes(day)}
+function fixedType(id,day){if(!staffList.find(s=>s.id===id).auto)return"excluded";if(has("paid",id,day))return"paid";if(has("off",id,day))return"requestOff";if(has("unavailable",id,day))return"unavailable";return null}
+function applyFixed(){staffList.forEach(st=>days.forEach(day=>{const ft=fixedType(st.id,day);if(ft){shiftMatrix[st.id][day]=ft;if(ft==="requestOff")addTag(st.id,day,"希");if(ft==="paid")addTag(st.id,day,"有");if(ft==="unavailable")addTag(st.id,day,"不");if(ft==="excluded")addTag(st.id,day,"外")}}))}
+
+function generateShift(){_seed=Date.now()^(Math.random()*0xffffffff)|0;initMatrix();applyFixed();days.forEach(day=>{for(const t of["early","late","middle","changeover"]){const req=requirements[day][t];if(!req||req.required<=0)continue;assignMinimumAM(day,t,req.minAM);assignMinimumCashKey(day,t,req.minKey);fillRequiredStaff(day,t,req.required);if(t==="changeover")applyChangeoverNextDayOff(day)}});days.forEach(day=>repairDailyShortage(day));staffList.forEach(st=>days.forEach(day=>{if(shiftMatrix[st.id][day]==="blank")shiftMatrix[st.id][day]="off"}));markBlocks();generated=true;validateFinal();buildSheet();updateCards();renderWarnings()}
+function clearGenerated(){initMatrix();generated=false;updateCardsBlank();buildSheet();document.getElementById("warningList").innerHTML="<li>自動生成分をクリアしました。</li>"}
+function countAssigned(day,t){return staffList.filter(st=>shiftMatrix[st.id][day]===t).length}
+function countAM(day,t){return staffList.filter(st=>st.am&&shiftMatrix[st.id][day]===t).length}
+function countKey(day,t){return staffList.filter(st=>st.key&&shiftMatrix[st.id][day]===t).length}
+function totalRequired(day){return Object.values(requirements[day]).reduce((s,r)=>s+r.required,0)}
+function totalActual(day){return["early","middle","late","changeover"].reduce((s,t)=>s+countAssigned(day,t),0)}
+function getWorkDays(id){return days.filter(d=>isWork(shiftMatrix[id][d])).length}
+function getOffDays(id){return days.filter(d=>["off","requestOff","paid","unavailable"].includes(shiftMatrix[id][d])).length}
+function getHours(id){return getWorkDays(id)*9}
+
+function assignMinimumAM(day,t,min){while(countAM(day,t)<min){const c=staffList.filter(st=>st.am).filter(st=>canAssign(st,day,t)).sort((a,b)=>scoreStaff(b,day,t,"AM")-scoreStaff(a,day,t,"AM"));if(!c.length){unfilled.push(`5/${day} ${label(t)}：AM最低人数を満たせません`);return}assign(c[0],day,t,"役")}}
+function assignMinimumCashKey(day,t,min){while(countKey(day,t)<min){const c=staffList.filter(st=>st.key).filter(st=>canAssign(st,day,t)).sort((a,b)=>scoreStaff(b,day,t,"cashKey")-scoreStaff(a,day,t,"cashKey"));if(!c.length){unfilled.push(`5/${day} ${label(t)}：金銭キー最低人数を満たせません`);return}assign(c[0],day,t,"役")}}
+function fillRequiredStaff(day,t,req){while(countAssigned(day,t)<req){const c=staffList.filter(st=>canAssign(st,day,t)).sort((a,b)=>scoreStaff(b,day,t,"general")-scoreStaff(a,day,t,"general"));if(!c.length){unfilled.push(`5/${day} ${label(t)}：必要人数 ${req}名に対して ${countAssigned(day,t)}名`);return}assign(c[0],day,t,"自")}}
+function assign(st,day,t,tag){shiftMatrix[st.id][day]=t;addTag(st.id,day,tag);if(t==="changeover")setNextDayAutoOff(st,day)}
+function setNextDayAutoOff(st,day){const nd=day+1;if(nd>31)return;if(shiftMatrix[st.id][nd]==="blank"){shiftMatrix[st.id][nd]="off";addTag(st.id,nd,"翌休")}}
+function applyChangeoverNextDayOff(day){staffList.forEach(st=>{if(shiftMatrix[st.id][day]==="changeover")setNextDayAutoOff(st,day)})}
+function canAssign(st,day,t){if(!st.auto)return false;if(shiftMatrix[st.id][day]!=="blank")return false;if(requirements[day][t].required<=0)return false;if(has("off",st.id,day)||has("paid",st.id,day)||has("unavailable",st.id,day))return false;if(t==="early"&&has("early",st.id,day))return false;if(t==="late"&&has("late",st.id,day))return false;if(t==="changeover"&&!st.changeover)return false;if(wouldExceedMaxConsecutiveWork(st.id,day))return false;if(wouldBreakInterval(st.id,day,t))return false;return true}
+function wouldExceedMaxConsecutiveWork(id,day){return countConsecutiveBefore(id,day)+1+countConsecutiveAfter(id,day)>MAX_CONSEC}
+function countConsecutiveBefore(id,day){let c=0;for(let d=day-1;d>=1;d--){if(isWork(shiftMatrix[id][d]))c++;else break}return c}
+function countConsecutiveAfter(id,day){let c=0;for(let d=day+1;d<=31;d++){if(isWork(shiftMatrix[id][d]))c++;else break}return c}
+function buildShiftDateTime(day,t){const def=shiftDefs[t];let[sh,sm]=def.start.split(":").map(Number);let[eh,em]=def.end.split(":").map(Number);const start=new Date(2026,4,day,sh,sm,0);let ed=day;if(eh>=24){eh-=24;ed=day+1}const end=new Date(2026,4,ed,eh,em,0);return{start,end}}
+function findPrevShift(id,day){for(let d=day-1;d>=1;d--){const s=shiftMatrix[id][d];if(isWork(s))return buildShiftDateTime(d,s)}return null}
+function findNextShift(id,day){for(let d=day+1;d<=31;d++){const s=shiftMatrix[id][d];if(isWork(s))return buildShiftDateTime(d,s)}return null}
+function wouldBreakInterval(id,day,t){const ns=buildShiftDateTime(day,t);const prev=findPrevShift(id,day),next=findNextShift(id,day);if(prev&&(ns.start-prev.end)/36e5<MIN_INTERVAL_HOURS)return true;if(next&&(next.start-ns.end)/36e5<MIN_INTERVAL_HOURS)return true;return false}
+function scoreStaff(st,day,t,purpose){let s=0;const wd=getWorkDays(st.id);s+=(st.target-wd)*12;if(wd<TARGET_MIN)s+=20;if(wd>=TARGET_MAX)s-=30;const b=countConsecutiveBefore(st.id,day);if(b===0)s+=4;if(b===1)s+=18;if(b===2)s+=24;if(b===3)s-=12;if(b>=4)s-=999;const prev=day>1?shiftMatrix[st.id][day-1]:null;const prev2=day>2?shiftMatrix[st.id][day-2]:null;if(prev===t)s+=25;if(prev===t&&prev2===t)s+=16;if(prev&&isWork(prev)&&prev!==t)s-=14;if(st.pref===t)s+=6;if(purpose==="AM"&&st.am)s+=60;if(purpose==="cashKey"&&st.key)s+=50;if(purpose==="general"&&st.key)s+=2;if(t==="changeover")s-=recentChangeoverPenalty(st.id,day);if(t==="early"&&day>2&&shiftMatrix[st.id][day-2]==="changeover")s-=50;// ランダムジッター：毎回±8点のブレを加えることで同スコア帯の順序を変化させる
+s+=(seededRandom()-0.5)*16;return s}
+function recentChangeoverPenalty(id,day){let p=0;for(let d=Math.max(1,day-10);d<day;d++){if(shiftMatrix[id][d]==="changeover")p+=30}return p}
+function repairDailyShortage(day){for(const t of["early","late","middle","changeover"]){const req=requirements[day][t];if(!req||req.required<=0)continue;while(countAssigned(day,t)<req.required){const c=staffList.filter(st=>canAssign(st,day,t)).sort((a,b)=>scoreStaff(b,day,t,"repair")-scoreStaff(a,day,t,"repair"));if(!c.length)break;assign(c[0],day,t,"自")}}}
+function markBlocks(){staffList.forEach(st=>{let start=1;while(start<=31){const s=shiftMatrix[st.id][start];if(!["early","middle","late"].includes(s)){start++;continue}let end=start;while(end+1<=31&&shiftMatrix[st.id][end+1]===s)end++;const len=end-start+1;if(len>=2){for(let d=start;d<=end;d++)addTag(st.id,d,len>=3?"ブロック":"連")}start=end+1}})}
+function validateFinal(){errors=[];unfilled=[];days.forEach(day=>{for(const t of["early","late","middle","changeover"]){const req=requirements[day][t];if(req.required>0&&countAssigned(day,t)<req.required)unfilled.push(`5/${day} ${label(t)}：必要${req.required} / 配置${countAssigned(day,t)}`);if(req.minAM>0&&countAM(day,t)<req.minAM)unfilled.push(`5/${day} ${label(t)}：AM不足`);if(req.minKey>0&&countKey(day,t)<req.minKey)unfilled.push(`5/${day} ${label(t)}：金銭キー不足`)}});staffList.forEach(st=>{let consec=0;days.forEach(day=>{const s=shiftMatrix[st.id][day];if(isWork(s))consec++;else consec=0;if(consec>MAX_CONSEC)errors.push(`${st.name}：5/${day}時点で${consec}連勤`);if(s==="early"&&has("early",st.id,day))errors.push(`${st.name} 5/${day}：早番不可に早番`);if(s==="late"&&has("late",st.id,day))errors.push(`${st.name} 5/${day}：遅番不可に遅番`);if(isWork(s)&&(has("off",st.id,day)||has("paid",st.id,day)||has("unavailable",st.id,day)))errors.push(`${st.name} 5/${day}：希望休/有休/不可に勤務`);if(s==="changeover"&&!st.changeover)errors.push(`${st.name} 5/${day}：入替不可者に入替`);if(day>1&&shiftMatrix[st.id][day-1]==="changeover"&&isWork(s))errors.push(`${st.name} 5/${day}：入替翌日に勤務`)})});staffList.forEach(st=>{days.forEach(day=>{const s=shiftMatrix[st.id][day];if(isWork(s)&&wouldBreakIntervalCheckFinal(st.id,day,s))errors.push(`${st.name} 5/${day}：勤務間インターバル不足`)})})}
+function wouldBreakIntervalCheckFinal(id,day,t){const ns=buildShiftDateTime(day,t);const prev=findPrevShift(id,day);if(prev&&(ns.start-prev.end)/36e5<MIN_INTERVAL_HOURS)return true;return false}
+function label(t){return shiftDefs[t]?.label||t}
+function updateCards(){const auto=staffList.filter(s=>s.auto);const avg=(auto.reduce((sum,s)=>sum+getWorkDays(s.id),0)/auto.length).toFixed(1);const covered=days.filter(d=>totalActual(d)>=totalRequired(d)).length;const coverage=Math.round(covered/31*100);const roleOk=days.filter(day=>{let ok=true;for(const t of["early","late","middle","changeover"]){const req=requirements[day][t];if(req.required<=0)continue;if(req.minAM>0&&countAM(day,t)<req.minAM)ok=false;if(req.minKey>0&&countKey(day,t)<req.minKey)ok=false}return ok}).length;const roleRate=Math.round(roleOk/31*100);let wc=0,bc=0;auto.forEach(st=>days.forEach(day=>{if(["early","middle","late"].includes(shiftMatrix[st.id][day])){wc++;if((cellTags[st.id][day]||[]).includes("ブロック"))bc++}}));const blockRate=wc?Math.round(bc/wc*100):0;document.getElementById("avgWorkDays").textContent=avg+"日";document.getElementById("blockRate").textContent=blockRate+"%";document.getElementById("coverageRate").textContent=coverage+"%";document.getElementById("roleRate").textContent=roleRate+"%";document.getElementById("errorCount").textContent=errors.length+"件"}
+function updateCardsBlank(){["avgWorkDays","blockRate","coverageRate","roleRate","errorCount"].forEach(id=>document.getElementById(id).textContent="--")}
+function renderWarnings(){let html=[];if(errors.length===0)html.push("<li>重大エラーはありません。最大4連勤・インターバル・希望休を候補除外で処理しています。</li>");else html.push(...errors.slice(0,10).map(e=>`<li><strong style="color:var(--warn)">重大：</strong>${e}</li>`));if(unfilled.length===0)html.push("<li>未充足はありません。AM・金銭キー・必要人数を満たしています。</li>");else html.push(...unfilled.slice(0,12).map(e=>`<li><strong style="color:var(--accent3)">未充足：</strong>${e}</li>`));html.push("<li>勤務は3〜4日単位の同一区分ブロックを優先し、平均20日前後を目標に配置しています。</li>");document.getElementById("warningList").innerHTML=html.join("")}
+function isWeekStartMonday(day){return new Date(2026,4,day).getDay()===1}
+function addWeekStartClass(el,day){if(isWeekStartMonday(day))el.classList.add("week-start")}
+function buildSheet(){const tbody=document.getElementById("sheetBody");tbody.innerHTML="";buildStoreRows(tbody);buildSummaryRows(tbody);buildEventRow(tbody);buildDateHeader(tbody);buildStaffRows(tbody)}
+function buildStoreRows(tbody){const tr1=document.createElement("tr");tr1.innerHTML=`<td class="store-cell" colspan="3">サンプル店舗 — デモ環境</td><td colspan="${days.length}" style="text-align:left;font-weight:700;background:var(--surface2);color:var(--text-muted);padding-left:10px;">仮シフト自動生成デモ v3　2026年5月　状態：${generated?"✅ 自動生成済み":"⬜ 未生成"}</td>`;tbody.appendChild(tr1);const tr2=document.createElement("tr");tr2.innerHTML=`<td class="store-cell" colspan="3">条件概要</td><td colspan="${days.length}" style="text-align:left;font-weight:500;background:rgba(79,142,247,.08);color:var(--text-muted);padding-left:10px;font-size:11px;">最大4連勤 / 11時間インターバル / 目標20日 / 3〜4勤ブロック / AM・金銭キー先行配置 / SM対象外</td>`;tbody.appendChild(tr2)}
+function buildSummaryRows(tbody){const rows=[{label:"早番人数",values:days.map(d=>countAssigned(d,"early"))},{label:"中番人数",values:days.map(d=>countAssigned(d,"middle"))},{label:"遅番人数",values:days.map(d=>countAssigned(d,"late"))},{label:"入替人数",values:days.map(d=>countAssigned(d,"changeover"))},{label:"必要人数",values:days.map(d=>totalRequired(d))},{label:"投入人数",values:days.map(d=>totalActual(d))},{label:"過不足",values:days.map(d=>totalActual(d)-totalRequired(d))}];rows.forEach(row=>{const tr=document.createElement("tr");const total=row.values.reduce((s,v)=>s+Number(v||0),0);tr.innerHTML=`<td class="summary-label">${row.label}</td><td class="summary-total-label">計</td><td class="summary-total">${total}</td>`;days.forEach((day,i)=>{const td=document.createElement("td");td.className="day-col";addWeekStartClass(td,day);td.textContent=row.values[i];if(row.label==="過不足"){const v=Number(row.values[i]);if(v<0)td.classList.add("shortage");else if(v>0)td.classList.add("surplus");else td.classList.add("exact")}tr.appendChild(td)});tbody.appendChild(tr)})}
+function buildEventRow(tbody){const tr=document.createElement("tr");tr.className="event-row";tr.innerHTML=`<td colspan="3">イベント・連絡事項</td>`;days.forEach(day=>{const td=document.createElement("td");td.className="day-col";addWeekStartClass(td,day);td.textContent=events[day]||"";tr.appendChild(td)});tbody.appendChild(tr)}
+function buildDateHeader(tbody){const tr=document.createElement("tr");tr.innerHTML=`<th class="staff-head">従業員</th><th class="staff-info-head" colspan="2">区分／月計</th>`;days.forEach(day=>{const date=new Date(2026,4,day);const week=["日","月","火","水","木","金","土"][date.getDay()];const th=document.createElement("th");th.className="date-head day-col";addWeekStartClass(th,day);if(week==="日")th.classList.add("sunday");if(week==="土")th.classList.add("saturday");th.innerHTML=`5/${day}<br>(${week})`;tr.appendChild(th)});tbody.appendChild(tr)}
+function buildStaffRows(tbody){staffList.forEach(st=>{const tr=document.createElement("tr");const nameTd=document.createElement("td");nameTd.className="staff-name";nameTd.innerHTML=`<div>${st.name}</div><div class="staff-sub"><span>${getWorkDays(st.id)}日</span><span>${getOffDays(st.id)}休</span><span>${getHours(st.id)}h</span></div>`;tr.appendChild(nameTd);const roleTd=document.createElement("td");roleTd.className="staff-meta";roleTd.colSpan=2;roleTd.innerHTML=`${st.role}<br><span>${st.auto?"対象 ":"対象外 "}${st.am?"AM ":""}${st.key?"金銭 ":""}${st.changeover?"入替":""}</span>`;tr.appendChild(roleTd);days.forEach(day=>{const td=createShiftCell(st,day,shiftMatrix[st.id][day]||"blank");addWeekStartClass(td,day);tr.appendChild(td)});tbody.appendChild(tr)})}
+function createShiftCell(st,day,shiftType){const td=document.createElement("td");td.className="shift-cell day-col";td.dataset.staffId=st.id;td.dataset.staffName=st.name;td.dataset.day=day;td.dataset.dateLabel=`2026/5/${day}`;applyShiftToCell(td,shiftType,st.id,day);td.addEventListener("click",e=>{e.stopPropagation();selectCell(td,e)});return td}
+function applyShiftToCell(td,shiftType,id,day){Object.values(shiftDefs).forEach(def=>td.classList.remove(def.className));td.classList.remove("violation");const def=shiftDefs[shiftType]||shiftDefs.blank;td.classList.add(def.className);let tagHtml="";const tags=cellTags[id]?.[day]||[];if(tags.includes("希"))tagHtml=`<span class="tag-mini tag-request">希</span>`;else if(tags.includes("有"))tagHtml=`<span class="tag-mini tag-request">有</span>`;else if(tags.includes("不"))tagHtml=`<span class="tag-mini tag-error">不</span>`;else if(tags.includes("翌休"))tagHtml=`<span class="tag-mini tag-auto-rest">翌休</span>`;else if(tags.includes("役"))tagHtml=`<span class="tag-mini tag-role">役</span>`;else if(tags.includes("ブロック"))tagHtml=`<span class="tag-mini tag-block">ブロック</span>`;else if(tags.includes("手"))tagHtml=`<span class="tag-mini tag-manual">手</span>`;else if(tags.includes("自"))tagHtml=`<span class="tag-mini tag-block">自</span>`;if(["off","requestOff","paid","unavailable","excluded"].includes(shiftType)){td.innerHTML=`<span class="circle-mark">${def.label}</span>${tagHtml}`}else if(shiftType==="blank"){td.innerHTML=tagHtml}else{td.innerHTML=`<div class="time-two-lines"><div>${def.start}</div><div>${def.end}</div></div>${tagHtml}`}}
+function selectCell(td,event){selectedCell=td;showQuickMenu(td,event)}
+function showQuickMenu(td,event){const menu=document.getElementById("quickMenu");document.getElementById("quickTitle").textContent=`${td.dataset.staffName}｜${td.dataset.dateLabel}`;menu.style.display="block";let left=event.clientX+10,top=event.clientY+10;if(left+230>innerWidth)left=innerWidth-242;if(top+270>innerHeight)top=innerHeight-282;menu.style.left=left+"px";menu.style.top=top+"px"}
+function hideQuickMenu(){document.getElementById("quickMenu").style.display="none";selectedCell=null}
+function changeSelectedShift(shiftType){if(!selectedCell)return;const id=selectedCell.dataset.staffId;const day=Number(selectedCell.dataset.day);shiftMatrix[id][day]=shiftType;cellTags[id][day]=["手"];validateFinal();buildSheet();updateCards();renderWarnings();hideQuickMenu()}
+function downloadCsv(){const header=["社員番号","氏名","区分",...days.map(d=>`5/${d}`)];const lines=[header.join(",")];staffList.forEach(st=>{lines.push([st.id,st.name,st.role,...days.map(day=>shiftDefs[shiftMatrix[st.id][day]]?.label||"")].join(","))});const blob=new Blob(["\uFEFF"+lines.join("\n")],{type:"text/csv;charset=utf-8;"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="shift_auto_generate_demo.csv";a.click();URL.revokeObjectURL(url)}
+document.addEventListener("click",e=>{const menu=document.getElementById("quickMenu");if(!menu.contains(e.target))hideQuickMenu()});
+initMatrix();applyFixed();buildSheet();updateCardsBlank();
+</script>
+</body>
+</html>
