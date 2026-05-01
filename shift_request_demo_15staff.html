@@ -17,7 +17,7 @@
       --green: #45d6a6;
       --yellow: #ffd166;
       --purple: #a78bfa;
-      --shadow: 0 18px 40px rgba(0,0,0,.35);
+      --shadow: 0 14px 30px rgba(0,0,0,.30);
     }
 
     * {
@@ -35,7 +35,7 @@
       background-size: 40px 40px;
       color: var(--text);
       min-height: 100vh;
-      padding: 18px 12px 40px;
+      padding: 10px 8px 32px;
     }
 
     .wrap {
@@ -43,56 +43,49 @@
       margin: 0 auto;
     }
 
-    .hero {
+    .top {
       background: linear-gradient(145deg, #1b2035, #141827);
       border: 1px solid var(--line);
-      border-radius: 22px;
-      padding: 20px;
+      border-radius: 18px;
+      padding: 12px 14px;
       box-shadow: var(--shadow);
-      margin-bottom: 18px;
+      margin-bottom: 10px;
     }
 
-    .hero h1 {
-      margin: 0 0 10px;
-      font-size: 26px;
-      letter-spacing: .03em;
-    }
-
-    .hero p {
+    .top h1 {
       margin: 0;
+      font-size: 21px;
+      letter-spacing: .03em;
+      line-height: 1.25;
+    }
+
+    .top p {
+      margin: 5px 0 0;
       color: var(--muted);
-      font-size: 14px;
-      line-height: 1.7;
+      font-size: 12px;
+      line-height: 1.45;
     }
 
     .card {
       background: rgba(23,26,42,.96);
       border: 1px solid var(--line);
-      border-radius: 22px;
-      padding: 18px;
+      border-radius: 18px;
+      padding: 12px;
       box-shadow: var(--shadow);
-      margin-bottom: 18px;
+      margin-bottom: 10px;
     }
 
-    .title {
-      margin: 0 0 14px;
-      font-size: 20px;
-      font-weight: 800;
-      letter-spacing: .04em;
-    }
-
-    .input-row {
+    .compact-info {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 12px;
+      grid-template-columns: 0.8fr 1.2fr;
+      gap: 8px;
     }
 
     .field label {
       display: block;
-      font-size: 12px;
+      font-size: 11px;
       color: var(--muted);
-      margin-bottom: 6px;
+      margin-bottom: 4px;
       font-weight: 700;
     }
 
@@ -101,51 +94,40 @@
       background: #111525;
       color: var(--text);
       border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 12px;
-      font-size: 16px;
+      border-radius: 11px;
+      padding: 9px 10px;
+      font-size: 15px;
       outline: none;
-    }
-
-    .notice {
-      background: rgba(255, 209, 102, .12);
-      border-left: 5px solid var(--yellow);
-      border-radius: 14px;
-      padding: 12px 14px;
-      color: var(--muted);
-      font-size: 14px;
-      line-height: 1.75;
     }
 
     .mode-buttons {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-      margin-bottom: 14px;
+      gap: 8px;
+      margin-bottom: 8px;
     }
 
     .mode-btn {
-      min-height: 58px;
+      min-height: 48px;
       border: 1px solid var(--line);
       background: var(--panel2);
       color: var(--muted);
-      border-radius: 14px;
+      border-radius: 13px;
       font-size: 14px;
       font-weight: 800;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 6px;
+      gap: 5px;
       flex-direction: column;
       box-shadow: inset 0 0 0 1px rgba(255,255,255,.03);
     }
 
     .mode-btn.active {
       outline: 3px solid rgba(255,255,255,.75);
-      outline-offset: 2px;
+      outline-offset: 1px;
       color: white;
-      transform: translateY(-1px);
     }
 
     .mode-early { border-color: rgba(91,141,239,.7); }
@@ -154,8 +136,8 @@
     .mode-paid { border-color: rgba(69,214,166,.75); }
 
     .dot {
-      width: 17px;
-      height: 17px;
+      width: 15px;
+      height: 15px;
       border-radius: 5px;
       display: inline-block;
     }
@@ -166,43 +148,43 @@
     .dot.paid { background: var(--green); }
 
     .current-mode {
-      margin-bottom: 14px;
-      padding: 14px;
-      border-radius: 16px;
+      padding: 9px 10px;
+      border-radius: 12px;
       background: rgba(255,255,255,.06);
       border: 1px solid var(--line);
-      font-size: 15px;
-      line-height: 1.6;
+      font-size: 13px;
+      line-height: 1.45;
       color: var(--muted);
+      margin-bottom: 10px;
     }
 
     .current-mode strong {
       color: white;
-      font-size: 20px;
+      font-size: 16px;
     }
 
     .month-nav {
       display: grid;
-      grid-template-columns: 82px 1fr 82px;
+      grid-template-columns: 60px 1fr 60px;
       align-items: center;
-      gap: 10px;
-      margin: 18px 0 18px;
+      gap: 8px;
+      margin: 6px 0 10px;
     }
 
     .month-nav button {
-      height: 62px;
+      height: 48px;
       border: 1px solid var(--line);
       background: var(--panel2);
       color: white;
-      border-radius: 14px;
-      font-size: 28px;
+      border-radius: 13px;
+      font-size: 24px;
       font-weight: 900;
       cursor: pointer;
     }
 
     .month-label {
       text-align: center;
-      font-size: 26px;
+      font-size: 23px;
       font-weight: 900;
       letter-spacing: .03em;
     }
@@ -210,15 +192,15 @@
     .week {
       display: grid;
       grid-template-columns: repeat(7, 1fr);
-      gap: 8px;
-      margin-bottom: 8px;
+      gap: 6px;
+      margin-bottom: 6px;
     }
 
     .week div {
       text-align: center;
       color: #6f7695;
       font-weight: 900;
-      font-size: 16px;
+      font-size: 14px;
     }
 
     .week .sun { color: #ff7f91; }
@@ -227,16 +209,16 @@
     .calendar {
       display: grid;
       grid-template-columns: repeat(7, 1fr);
-      gap: 8px;
+      gap: 6px;
     }
 
     .day {
-      min-height: 80px;
-      border-radius: 12px;
+      min-height: 64px;
+      border-radius: 11px;
       background: var(--panel2);
       border: 1px solid var(--line);
       color: #e9ecf7;
-      font-size: 23px;
+      font-size: 21px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -285,10 +267,10 @@
 
     .day .mini {
       position: absolute;
-      bottom: 6px;
-      left: 6px;
-      right: 6px;
-      font-size: 10px;
+      bottom: 5px;
+      left: 4px;
+      right: 4px;
+      font-size: 9px;
       font-weight: 900;
       text-align: center;
       opacity: .95;
@@ -296,14 +278,14 @@
     }
 
     .summary {
-      margin-top: 18px;
+      margin-top: 10px;
       background: rgba(32,36,58,.92);
       border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 13px;
+      border-radius: 13px;
+      padding: 10px 11px;
       color: var(--muted);
-      font-size: 16px;
-      line-height: 1.9;
+      font-size: 13px;
+      line-height: 1.7;
     }
 
     .summary strong { color: white; }
@@ -313,15 +295,15 @@
     .summary .green { color: #6ee7b7; }
 
     .actions {
-      margin-top: 16px;
+      margin-top: 12px;
     }
 
     .action-btn {
       width: 100%;
       border: none;
-      border-radius: 16px;
-      padding: 16px 10px;
-      font-size: 17px;
+      border-radius: 15px;
+      padding: 14px 10px;
+      font-size: 16px;
       font-weight: 900;
       cursor: pointer;
     }
@@ -334,26 +316,26 @@
     .reset-link {
       display: block;
       width: fit-content;
-      margin: 14px auto 0;
+      margin: 10px auto 0;
       background: transparent;
       border: none;
       color: var(--muted);
       font-size: 13px;
       text-decoration: underline;
       cursor: pointer;
-      padding: 6px 10px;
+      padding: 5px 10px;
     }
 
     .confirm {
       display: none;
-      margin-top: 14px;
+      margin-top: 12px;
       background: #111525;
       border: 1px solid var(--line);
       border-radius: 14px;
-      padding: 14px;
+      padding: 13px;
       color: var(--muted);
       font-size: 14px;
-      line-height: 1.8;
+      line-height: 1.75;
     }
 
     .confirm h3 {
@@ -371,90 +353,121 @@
       color: #dbe7ff;
     }
 
-    @media (max-width: 560px) {
+    @media (max-width: 390px) {
       body {
-        padding: 12px 8px 34px;
+        padding: 8px 6px 28px;
       }
 
-      .hero {
-        padding: 17px;
+      .top {
+        padding: 10px 12px;
+        margin-bottom: 8px;
       }
 
-      .hero h1 {
-        font-size: 22px;
+      .top h1 {
+        font-size: 19px;
+      }
+
+      .top p {
+        font-size: 11px;
       }
 
       .card {
-        padding: 16px;
+        padding: 10px;
+        margin-bottom: 8px;
       }
 
-      .input-row {
-        grid-template-columns: 1fr;
+      .compact-info {
+        grid-template-columns: 0.75fr 1.25fr;
+        gap: 7px;
+      }
+
+      input {
+        padding: 8px 9px;
+        font-size: 14px;
       }
 
       .mode-buttons {
-        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
       }
 
       .mode-btn {
-        min-height: 54px;
+        min-height: 45px;
+        font-size: 13px;
+      }
+
+      .dot {
+        width: 13px;
+        height: 13px;
+      }
+
+      .current-mode {
+        padding: 8px 9px;
+        font-size: 12px;
+      }
+
+      .current-mode strong {
         font-size: 15px;
       }
 
       .month-nav {
-        grid-template-columns: 72px 1fr 72px;
-      }
-
-      .month-label {
-        font-size: 24px;
-      }
-
-      .day {
-        min-height: 79px;
-        font-size: 25px;
-      }
-
-      .calendar,
-      .week {
-        gap: 8px;
-      }
-    }
-
-    @media (max-width: 390px) {
-      .day {
-        min-height: 67px;
-        font-size: 22px;
-      }
-
-      .calendar,
-      .week {
+        grid-template-columns: 54px 1fr 54px;
         gap: 6px;
       }
 
-      .month-label {
+      .month-nav button {
+        height: 44px;
         font-size: 22px;
       }
 
-      .month-nav button {
-        height: 58px;
+      .month-label {
+        font-size: 21px;
+      }
+
+      .calendar,
+      .week {
+        gap: 5px;
+      }
+
+      .day {
+        min-height: 58px;
+        font-size: 20px;
+      }
+
+      .day .mini {
+        font-size: 8px;
+        bottom: 4px;
+      }
+
+      .summary {
+        font-size: 12px;
+        padding: 9px 10px;
+      }
+    }
+
+    @media (min-width: 560px) {
+      .day {
+        min-height: 78px;
+      }
+
+      .top h1 {
+        font-size: 24px;
+      }
+
+      .top p {
+        font-size: 13px;
       }
     }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <section class="hero">
+    <section class="top">
       <h1>スマホ希望入力デモ</h1>
-      <p>
-        従業員がスマホから勤務希望を入力するためのデモ画面です。<br>
-        未入力の日は「お任せ」として扱います。
-      </p>
+      <p>早番・遅番・休み・有休を入力できます。未入力はお任せ扱いです。</p>
     </section>
 
     <section class="card">
-      <h2 class="title">基本情報</h2>
-
-      <div class="input-row">
+      <div class="compact-info">
         <div class="field">
           <label for="employeeCode">社員コード</label>
           <input id="employeeCode" type="text" inputmode="numeric" value="1001">
@@ -464,17 +477,9 @@
           <input id="employeeName" type="text" value="サンプル 太郎">
         </div>
       </div>
-
-      <div class="notice">
-        休みたい日は「休み」、有休希望日は「有休」を選択してください。<br>
-        早番・遅番の希望がある日だけ入力してください。<br>
-        何も選ばない日は「お任せ」扱いです。
-      </div>
     </section>
 
     <section class="card">
-      <h2 class="title">希望入力</h2>
-
       <div class="mode-buttons">
         <button class="mode-btn mode-early active" data-mode="early" type="button">
           <span class="dot early"></span>早番
@@ -491,11 +496,6 @@
       </div>
 
       <div class="current-mode" id="currentModeBox"></div>
-
-      <div class="notice">
-        上のボタンで入力内容を選び、日付をタップしてください。<br>
-        同じ希望が入っている日をもう一度タップすると、未入力に戻ります。
-      </div>
 
       <div class="month-nav">
         <button type="button" id="prevMonth">◀</button>
@@ -587,9 +587,8 @@
 
     function renderModeBox() {
       currentModeBox.innerHTML = `
-        現在の入力：<strong>${labels[selectedMode]}</strong><br>
-        日付をタップすると「${labels[selectedMode]}希望」として入力されます。<br>
-        すでに同じ希望が入っている日をタップすると、未入力に戻ります。
+        現在：<strong>${labels[selectedMode]}</strong>　
+        日付タップで入力／同じ日を再タップで取消
       `;
     }
 
@@ -686,10 +685,10 @@
         .map(([date]) => Number(date.slice(-2)));
 
       summaryEl.innerHTML = `
-        <div><span class="blue">🔵</span> 早番希望: <strong>${formatDays(earlyDays)}</strong> (${counts.early}日)</div>
-        <div><span class="purple">🟣</span> 遅番希望: <strong>${formatDays(lateDays)}</strong> (${counts.late}日)</div>
-        <div><span class="red">🔴</span> 休み希望: <strong>${formatDays(offDays)}</strong> (${counts.off}日)</div>
-        <div><span class="green">🟢</span> 有休希望: <strong>${formatDays(paidDays)}</strong> (${counts.paid}日)</div>
+        <div><span class="blue">🔵</span> 早番: <strong>${formatDays(earlyDays)}</strong> (${counts.early}日)</div>
+        <div><span class="purple">🟣</span> 遅番: <strong>${formatDays(lateDays)}</strong> (${counts.late}日)</div>
+        <div><span class="red">🔴</span> 休み: <strong>${formatDays(offDays)}</strong> (${counts.off}日)</div>
+        <div><span class="green">🟢</span> 有休: <strong>${formatDays(paidDays)}</strong> (${counts.paid}日)</div>
       `;
     }
 
