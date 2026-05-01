@@ -3,36 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="勤務希望収集と半自動シフト作成を補助する試作デモ環境です。サンプルデータのみを使用しています。" />
-  <title>勤務希望収集・半自動シフト作成ツール｜試作デモ</title>
-  <style>
-    :root {
-      --bg: #0f172a;
-      --bg-soft: #111c33;
-      --panel: #17223a;
-      --panel-soft: #1d2a44;
-      --panel-light: #f8fafc;
-      --text: #e5e7eb;
-      --text-soft: #cbd5e1;
-      --muted: #94a3b8;
-      --line: rgba(148, 163, 184, 0.24);
-      --line-strong: rgba(203, 213, 225, 0.38);
-      --primary: #60a5fa;
-      --primary-strong: #3b82f6;
-      --primary-soft: rgba(96, 165, 250, 0.13);
-      --green: #86efac;
-      --green-soft: rgba(134, 239, 172, 0.12);
-      --amber: #facc15;
-      --amber-soft: rgba(250, 204, 21, 0.13);
-      --red: #fca5a5;
-      --red-soft: rgba(252, 165, 165, 0.13);
-      --ink: #f8fafc;
-      --shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
-      --radius-lg: 18px;
-      --radius-md: 12px;
-      --radius-sm: 8px;
-    }
+  <title>シフト作成補助 試作版</title>
 
+  <style>
     * {
       box-sizing: border-box;
     }
@@ -43,1361 +16,417 @@
 
     body {
       margin: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans JP", sans-serif;
       background:
-        linear-gradient(180deg, #0b1120 0%, var(--bg) 48%, #0b1120 100%);
-      line-height: 1.75;
+        radial-gradient(circle at top left, rgba(96, 165, 250, 0.18), transparent 34%),
+        linear-gradient(135deg, #07111f 0%, #0f172a 45%, #111827 100%);
+      color: #f8fafc;
+      min-height: 100vh;
     }
 
     a {
       color: inherit;
-      text-decoration: none;
     }
 
     .page {
-      width: min(1120px, calc(100% - 32px));
-      margin: 0 auto;
+      min-height: 100vh;
     }
 
-    .topbar {
+    .header {
       position: sticky;
       top: 0;
-      z-index: 10;
-      background: rgba(15, 23, 42, 0.92);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--line);
+      z-index: 20;
+      backdrop-filter: blur(14px);
+      background: rgba(7, 17, 31, 0.88);
+      border-bottom: 1px solid rgba(148, 163, 184, 0.18);
     }
 
-    .topbar-inner {
-      width: min(1120px, calc(100% - 32px));
+    .header-inner {
+      max-width: 980px;
       margin: 0 auto;
+      padding: 14px 18px;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      padding: 12px 0;
+      gap: 12px;
     }
 
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-weight: 800;
-      color: var(--ink);
-      white-space: nowrap;
-    }
-
-    .brand-mark {
-      width: 32px;
-      height: 32px;
-      border-radius: 8px;
+    .logo {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
       display: grid;
       place-items: center;
+      background: #e0f2fe;
       color: #0f172a;
-      background: #e2e8f0;
+      font-weight: 900;
+      font-size: 18px;
+      flex: 0 0 auto;
+    }
+
+    .site-title {
+      font-size: 19px;
       font-weight: 900;
       letter-spacing: 0.02em;
     }
 
-    .nav {
-      display: flex;
-      gap: 4px;
-      align-items: center;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-      font-size: 13px;
-      color: var(--text-soft);
-    }
-
-    .nav a {
-      padding: 7px 10px;
-      border-radius: 8px;
-    }
-
-    .nav a:hover {
-      background: rgba(255, 255, 255, 0.08);
-      color: var(--ink);
+    .main {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 28px 18px 56px;
     }
 
     .hero {
-      padding: 42px 0 22px;
+      padding: 28px 0 26px;
     }
 
-    .hero-grid {
-      display: grid;
-      grid-template-columns: 1.18fr 0.82fr;
-      gap: 18px;
-      align-items: stretch;
-    }
-
-    .hero-main,
-    .hero-side,
-    section.card {
-      background: rgba(23, 34, 58, 0.94);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow);
-    }
-
-    .hero-main {
-      padding: 32px;
-      overflow: hidden;
-      position: relative;
-    }
-
-    .hero-main::before {
-      content: "";
-      position: absolute;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 3px;
-      background: linear-gradient(90deg, var(--primary), transparent);
-      opacity: 0.9;
-    }
-
-    .hero-side {
-      padding: 24px;
-    }
-
-    .badge-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 18px;
-    }
-
-    .badge {
+    .label {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      padding: 5px 9px;
+      padding: 7px 12px;
       border-radius: 999px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid var(--line);
-      color: var(--text-soft);
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    .badge.primary {
-      background: var(--primary-soft);
+      border: 1px solid rgba(191, 219, 254, 0.25);
       color: #bfdbfe;
-      border-color: rgba(96, 165, 250, 0.32);
-    }
-
-    .badge.green {
-      background: var(--green-soft);
-      color: var(--green);
-      border-color: rgba(134, 239, 172, 0.28);
-    }
-
-    .badge.amber {
-      background: var(--amber-soft);
-      color: var(--amber);
-      border-color: rgba(250, 204, 21, 0.28);
+      background: rgba(255, 255, 255, 0.04);
+      font-size: 13px;
+      font-weight: 800;
+      margin-bottom: 16px;
     }
 
     h1 {
+      margin: 0 0 18px;
+      font-size: clamp(30px, 7vw, 52px);
+      line-height: 1.18;
+      letter-spacing: -0.04em;
+    }
+
+    .hero-text {
       margin: 0;
-      font-size: clamp(30px, 5.2vw, 52px);
-      line-height: 1.12;
-      letter-spacing: -0.035em;
-      color: var(--ink);
-    }
-
-    .lead {
-      margin: 20px 0 0;
-      font-size: 16px;
-      color: var(--text-soft);
       max-width: 760px;
+      color: #cbd5e1;
+      font-size: 16px;
+      line-height: 1.9;
+      font-weight: 600;
     }
 
-    .hero-actions {
-      margin-top: 26px;
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      position: relative;
-      z-index: 1;
+    .section {
+      margin-top: 22px;
+      padding: 28px;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 28px;
+      background: rgba(15, 23, 42, 0.68);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.26);
     }
 
-    .btn {
+    .section-label {
       display: inline-flex;
       align-items: center;
-      justify-content: center;
-      gap: 8px;
-      border: 1px solid transparent;
-      border-radius: 10px;
-      padding: 11px 16px;
-      min-height: 44px;
-      font-weight: 800;
-      cursor: pointer;
-      transition: background 0.12s ease, border-color 0.12s ease, transform 0.12s ease;
-      font-size: 14px;
-    }
-
-    .btn:hover {
-      transform: translateY(-1px);
-    }
-
-    .btn.primary {
-      color: #0f172a;
-      background: #bfdbfe;
-      border-color: #bfdbfe;
-    }
-
-    .btn.primary:hover {
-      background: #dbeafe;
-    }
-
-    .btn.secondary {
+      padding: 7px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(191, 219, 254, 0.22);
       color: #dbeafe;
-      background: rgba(96, 165, 250, 0.12);
-      border-color: rgba(96, 165, 250, 0.4);
-    }
-
-    .btn.ghost {
-      color: var(--text-soft);
-      background: transparent;
-      border-color: var(--line-strong);
-    }
-
-    .side-title {
-      margin: 0 0 12px;
-      font-size: 18px;
-      color: var(--ink);
-    }
-
-    .side-list {
-      margin: 0;
-      padding: 0;
-      list-style: none;
-      display: grid;
-      gap: 9px;
-    }
-
-    .side-list li {
-      display: grid;
-      grid-template-columns: 30px 1fr;
-      gap: 10px;
-      align-items: start;
-      padding: 10px;
-      border-radius: var(--radius-sm);
       background: rgba(255, 255, 255, 0.04);
-      border: 1px solid var(--line);
-      color: var(--text-soft);
-    }
-
-    .num {
-      width: 30px;
-      height: 30px;
-      border-radius: 8px;
-      background: rgba(226, 232, 240, 0.12);
-      color: #e2e8f0;
-      display: grid;
-      place-items: center;
-      font-weight: 900;
       font-size: 13px;
-    }
-
-    main {
-      padding: 14px 0 56px;
-    }
-
-    section.card {
-      padding: 26px;
-      margin-top: 18px;
-    }
-
-    .section-head {
-      display: flex;
-      align-items: end;
-      justify-content: space-between;
-      gap: 16px;
-      margin-bottom: 18px;
-    }
-
-    .section-kicker {
-      margin: 0 0 4px;
-      color: #93c5fd;
-      font-size: 12px;
-      font-weight: 800;
-      letter-spacing: 0.08em;
+      font-weight: 900;
+      margin-bottom: 16px;
     }
 
     h2 {
+      margin: 0 0 16px;
+      font-size: clamp(25px, 5.4vw, 38px);
+      line-height: 1.35;
+      letter-spacing: -0.03em;
+    }
+
+    .lead-text {
       margin: 0;
-      color: var(--ink);
-      font-size: clamp(22px, 3vw, 30px);
-      line-height: 1.3;
-      letter-spacing: -0.015em;
+      color: #cbd5e1;
+      line-height: 1.9;
+      font-weight: 700;
     }
 
-    .sub {
-      margin: 8px 0 0;
-      color: var(--muted);
-      max-width: 800px;
-    }
-
-    .demo-grid {
+    .flow-guide {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin: 24px 0 28px;
+    }
+
+    .flow-step {
+      display: flex;
       gap: 14px;
+      align-items: flex-start;
+      padding: 15px 16px;
+      border: 1px solid rgba(180, 205, 240, 0.18);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.045);
+    }
+
+    .flow-number {
+      flex: 0 0 auto;
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+      color: #0f172a;
+      background: #bfdbfe;
+      box-shadow: 0 0 0 4px rgba(191, 219, 254, 0.12);
+    }
+
+    .flow-step strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 15px;
+      color: #ffffff;
+    }
+
+    .flow-step p {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.7;
+      color: #b8c4d8;
+      font-weight: 600;
+    }
+
+    .demo-card-grid {
+      display: grid;
+      gap: 18px;
     }
 
     .demo-card {
-      padding: 18px;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-md);
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      min-height: 252px;
+      border: 1px solid rgba(180, 205, 240, 0.18);
+      border-radius: 22px;
+      padding: 26px 24px;
+      background: rgba(255, 255, 255, 0.045);
     }
 
-    .demo-label {
+    .card-badge {
       display: inline-flex;
-      width: fit-content;
-      padding: 4px 8px;
+      align-items: center;
+      padding: 7px 12px;
       border-radius: 999px;
-      border: 1px solid var(--line);
-      color: var(--text-soft);
-      font-size: 12px;
-      font-weight: 800;
+      border: 1px solid rgba(180, 205, 240, 0.22);
+      color: #dbeafe;
+      font-size: 13px;
+      font-weight: 900;
+      margin-bottom: 16px;
+      background: rgba(255, 255, 255, 0.035);
     }
 
     .demo-card h3 {
-      margin: 0;
-      color: var(--ink);
-      font-size: 19px;
-      line-height: 1.4;
+      margin: 0 0 16px;
+      font-size: 24px;
+      line-height: 1.35;
+      color: #ffffff;
+      letter-spacing: -0.02em;
     }
 
     .demo-card p {
-      margin: 0;
-      color: var(--muted);
-      font-size: 14px;
+      margin: 0 0 22px;
+      color: #b8c4d8;
+      line-height: 1.9;
+      font-weight: 700;
     }
 
-    .demo-card .btn {
-      margin-top: auto;
+    .demo-button {
+      display: block;
       width: 100%;
+      text-align: center;
+      padding: 18px 16px;
+      border-radius: 16px;
+      background: #bfdbfe;
+      color: #0f172a;
+      font-weight: 900;
+      text-decoration: none;
+      box-shadow: inset 0 -2px 0 rgba(15, 23, 42, 0.18);
+      border: 1px solid rgba(255, 255, 255, 0.28);
+    }
+
+    .demo-button:active {
+      transform: translateY(1px);
     }
 
     .notice {
-      border-radius: var(--radius-md);
-      padding: 16px;
-      border: 1px solid rgba(250, 204, 21, 0.3);
-      background: var(--amber-soft);
-      color: #fde68a;
+      margin-top: 22px;
+      padding: 18px 18px;
+      border-radius: 20px;
+      border: 1px solid rgba(34, 197, 94, 0.24);
+      background: rgba(22, 163, 74, 0.08);
+      color: #dcfce7;
+      line-height: 1.8;
+      font-weight: 700;
+      font-size: 14px;
     }
 
     .notice strong {
-      color: #fef3c7;
-    }
-
-    .steps {
-      counter-reset: step;
-      display: grid;
-      gap: 10px;
-    }
-
-    .step {
-      display: grid;
-      grid-template-columns: 42px 1fr;
-      gap: 14px;
-      align-items: start;
-      padding: 15px;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-md);
-    }
-
-    .step::before {
-      counter-increment: step;
-      content: counter(step);
-      width: 38px;
-      height: 38px;
-      border-radius: 9px;
-      display: grid;
-      place-items: center;
-      color: #0f172a;
-      background: #cbd5e1;
-      font-weight: 900;
-    }
-
-    .step h3 {
-      margin: 0 0 4px;
-      font-size: 17px;
-      color: var(--ink);
-    }
-
-    .step p {
-      margin: 0;
-      color: var(--muted);
-      font-size: 14px;
-    }
-
-    .two-col {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-    }
-
-    .mini-card {
-      padding: 17px;
-      border: 1px solid var(--line);
-      border-radius: var(--radius-md);
-      background: rgba(255, 255, 255, 0.04);
-    }
-
-    .mini-card h3 {
-      margin: 0 0 10px;
-      color: var(--ink);
-      font-size: 18px;
-    }
-
-    .mini-card ul {
-      margin: 0;
-      padding-left: 1.15em;
-      color: var(--muted);
-    }
-
-    .mini-card li + li {
-      margin-top: 6px;
-    }
-
-    .comparison {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-    }
-
-    .compare-box {
-      padding: 17px;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--line);
-      background: rgba(255, 255, 255, 0.04);
-    }
-
-    .compare-box.before {
-      background: rgba(252, 165, 165, 0.07);
-      border-color: rgba(252, 165, 165, 0.22);
-    }
-
-    .compare-box.after {
-      background: rgba(134, 239, 172, 0.07);
-      border-color: rgba(134, 239, 172, 0.22);
-    }
-
-    .compare-box h3 {
-      margin: 0 0 10px;
-      font-size: 19px;
-    }
-
-    .compare-box.before h3 {
-      color: var(--red);
-    }
-
-    .compare-box.after h3 {
-      color: var(--green);
-    }
-
-    .compare-box ul {
-      color: var(--text-soft);
-      margin: 0;
-      padding-left: 1.15em;
-    }
-
-    .compare-box li + li {
-      margin-top: 6px;
-    }
-
-    .status-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
-    }
-
-    .status-card {
-      padding: 16px;
-      border-radius: var(--radius-md);
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid var(--line);
-    }
-
-    .status-card .label {
-      font-size: 12px;
-      font-weight: 800;
-      color: var(--muted);
-      letter-spacing: 0.04em;
-    }
-
-    .status-card .value {
-      margin-top: 8px;
-      font-size: 24px;
-      line-height: 1.15;
-      font-weight: 900;
-      color: var(--ink);
-    }
-
-    .status-card .note {
-      margin-top: 8px;
-      font-size: 13px;
-      color: var(--muted);
-    }
-
-    .ok {
-      color: var(--green) !important;
-    }
-
-    .warn {
-      color: var(--amber) !important;
-    }
-
-    .danger {
-      color: var(--red) !important;
-    }
-
-    .table-wrap {
-      overflow-x: auto;
-      border: 1px solid var(--line);
-      border-radius: var(--radius-md);
-      background: rgba(255, 255, 255, 0.03);
-    }
-
-    table {
-      width: 100%;
-      min-width: 720px;
-      border-collapse: collapse;
-      font-size: 14px;
-    }
-
-    th,
-    td {
-      padding: 12px 14px;
-      text-align: left;
-      border-bottom: 1px solid var(--line);
-      vertical-align: top;
-    }
-
-    th {
-      background: rgba(255, 255, 255, 0.06);
-      color: var(--ink);
-      font-size: 13px;
-      white-space: nowrap;
-    }
-
-    td {
-      color: var(--text-soft);
-    }
-
-    tr:last-child td {
-      border-bottom: none;
-    }
-
-    .tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 4px 8px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 800;
-      background: rgba(96, 165, 250, 0.13);
-      color: #bfdbfe;
-      margin: 2px 4px 2px 0;
-      white-space: nowrap;
-      border: 1px solid rgba(96, 165, 250, 0.24);
-    }
-
-    .tag.green {
-      background: var(--green-soft);
-      color: var(--green);
-      border-color: rgba(134, 239, 172, 0.24);
-    }
-
-    .tag.amber {
-      background: var(--amber-soft);
-      color: var(--amber);
-      border-color: rgba(250, 204, 21, 0.24);
-    }
-
-    .tag.red {
-      background: var(--red-soft);
-      color: var(--red);
-      border-color: rgba(252, 165, 165, 0.24);
-    }
-
-    .flow {
-      display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      gap: 10px;
-      align-items: stretch;
-    }
-
-    .flow-item {
-      min-height: 112px;
-      padding: 14px;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--line);
-      background: rgba(255, 255, 255, 0.04);
-      position: relative;
-    }
-
-    .flow-item:not(:last-child)::after {
-      content: "→";
-      position: absolute;
-      right: -13px;
-      top: 42%;
-      color: var(--muted);
-      font-weight: 900;
-      z-index: 1;
-    }
-
-    .flow-item strong {
-      display: block;
-      color: var(--ink);
-      line-height: 1.35;
-    }
-
-    .flow-item span {
-      display: block;
-      color: var(--muted);
-      font-size: 13px;
-      margin-top: 8px;
-      line-height: 1.55;
-    }
-
-    .metric-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
-    }
-
-    .metric {
-      padding: 17px;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--line);
-      background: rgba(255, 255, 255, 0.04);
-    }
-
-    .metric strong {
-      display: block;
-      font-size: 22px;
-      line-height: 1.2;
-      color: #dbeafe;
-    }
-
-    .metric span {
-      display: block;
-      margin-top: 8px;
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    .roadmap {
-      display: grid;
-      gap: 10px;
-    }
-
-    .roadmap-item {
-      display: grid;
-      grid-template-columns: 88px 1fr;
-      gap: 14px;
-      padding: 15px;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--line);
-      background: rgba(255, 255, 255, 0.04);
-      align-items: start;
-    }
-
-    .priority {
-      display: inline-flex;
-      justify-content: center;
-      align-items: center;
-      border-radius: 999px;
-      min-height: 32px;
-      padding: 5px 9px;
-      font-size: 13px;
-      font-weight: 900;
-      background: rgba(226, 232, 240, 0.10);
-      color: #e2e8f0;
-      border: 1px solid var(--line);
-    }
-
-    .roadmap-item h3 {
-      margin: 0 0 4px;
-      color: var(--ink);
-      font-size: 17px;
-    }
-
-    .roadmap-item p {
-      margin: 0;
-      color: var(--muted);
-      font-size: 14px;
+      color: #ffffff;
     }
 
     .footer {
-      padding: 26px 0 40px;
-      color: var(--muted);
-      font-size: 13px;
-      text-align: center;
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 0 18px 32px;
+      color: #94a3b8;
+      font-size: 12px;
+      line-height: 1.7;
     }
 
-    .copy-row {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      margin-top: 14px;
-    }
-
-    .url-box {
-      flex: 1;
-      min-width: 0;
-      padding: 10px 11px;
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      background: rgba(255, 255, 255, 0.04);
-      color: var(--muted);
-      font-size: 13px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .small-button {
-      border: 1px solid rgba(226, 232, 240, 0.24);
-      border-radius: 10px;
-      padding: 10px 12px;
-      background: rgba(226, 232, 240, 0.10);
-      color: var(--ink);
-      font-weight: 800;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-
-    .toast {
-      position: fixed;
-      left: 50%;
-      bottom: 20px;
-      transform: translateX(-50%) translateY(20px);
-      opacity: 0;
-      pointer-events: none;
-      background: #e2e8f0;
-      color: #0f172a;
-      padding: 10px 14px;
-      border-radius: 999px;
-      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
-      transition: all 0.18s ease;
-      z-index: 99;
-      font-size: 14px;
-      font-weight: 800;
-    }
-
-    .toast.show {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-    }
-
-    @media (max-width: 980px) {
-      .hero-grid,
-      .demo-grid,
-      .two-col,
-      .comparison {
-        grid-template-columns: 1fr;
+    @media (min-width: 860px) {
+      .demo-card-grid {
+        grid-template-columns: repeat(3, 1fr);
       }
 
-      .status-grid,
-      .metric-grid {
-        grid-template-columns: repeat(2, 1fr);
+      .flow-guide {
+        grid-template-columns: repeat(3, 1fr);
       }
 
-      .flow {
-        grid-template-columns: 1fr 1fr;
+      .flow-step {
+        display: block;
       }
 
-      .flow-item:not(:last-child)::after {
-        display: none;
-      }
-
-      .nav {
-        display: none;
+      .flow-number {
+        margin-bottom: 12px;
       }
     }
 
-    @media (max-width: 640px) {
-      .page,
-      .topbar-inner {
-        width: min(100% - 22px, 1120px);
+    @media (max-width: 520px) {
+      .main {
+        padding: 22px 16px 44px;
       }
 
-      .hero {
-        padding-top: 28px;
+      .section {
+        padding: 22px 16px;
+        border-radius: 24px;
       }
 
-      .hero-main,
-      .hero-side,
-      section.card {
-        padding: 20px;
-        border-radius: 14px;
+      .header-inner {
+        padding: 12px 16px;
       }
 
-      .hero-actions .btn,
-      .demo-card .btn {
-        width: 100%;
+      .site-title {
+        font-size: 17px;
       }
 
-      .status-grid,
-      .metric-grid,
-      .flow {
-        grid-template-columns: 1fr;
+      .demo-card {
+        padding: 24px 20px;
       }
 
-      .roadmap-item {
-        grid-template-columns: 1fr;
+      .demo-card h3 {
+        font-size: 23px;
       }
 
-      .copy-row {
-        flex-direction: column;
-        align-items: stretch;
-      }
-    }
-
-    @media print {
-      body {
-        background: #fff;
-        color: #111827;
-      }
-
-      .topbar,
-      .hero-actions,
-      .copy-row,
-      .footer,
-      .toast {
-        display: none !important;
-      }
-
-      .page {
-        width: 100%;
-      }
-
-      .hero-main,
-      .hero-side,
-      section.card,
-      .mini-card,
-      .demo-card,
-      .compare-box,
-      .status-card,
-      .metric,
-      .roadmap-item {
-        box-shadow: none;
-        background: #fff !important;
-        color: #111827 !important;
-        border-color: #d1d5db !important;
-        break-inside: avoid;
-      }
-
-      section.card {
-        margin-top: 14px;
+      .demo-button {
+        padding: 18px 12px;
       }
     }
   </style>
 </head>
+
 <body>
-  <header class="topbar">
-    <div class="topbar-inner">
-      <a class="brand" href="#top" aria-label="トップへ戻る">
-        <span class="brand-mark">試</span>
-        <span>シフト作成補助 試作版</span>
-      </a>
-      <nav class="nav" aria-label="ページ内メニュー">
-        <a href="#demo">試作版を見る</a>
-        <a href="#guide">確認手順</a>
-        <a href="#checks">確認項目</a>
-        <a href="#flow">実務フロー</a>
-        <a href="#risk">実務化</a>
-      </nav>
-    </div>
-  </header>
-
-  <div class="page" id="top">
-    <section class="hero">
-      <div class="hero-grid">
-        <div class="hero-main">
-          <div class="badge-row">
-            <span class="badge primary">試作デモ</span>
-            <span class="badge green">サンプルデータのみ</span>
-            <span class="badge amber">正式運用前の確認用</span>
-          </div>
-          <h1>勤務希望収集と<br />仮シフト作成の補助ツール</h1>
-          <p class="lead">
-            紙ベースのシフト希望提出、提出状況の確認、希望休・有休・勤務不可・役割者配置・連勤・勤務間インターバルなどの確認作業を、仕組みで補助できないかを確認するための試作版です。
-            完全自動でシフトを確定させるものではなく、シフト作成者が最終確認・修正する前提です。
-          </p>
-          <div class="hero-actions">
-            <a class="btn primary" href="#demo">試作版を見る</a>
-            <a class="btn secondary" href="#guide">確認手順を見る</a>
-            <a class="btn ghost" href="#risk">実務化の注意点</a>
-          </div>
-        </div>
-
-        <aside class="hero-side" aria-label="この試作版で確認できること">
-          <h2 class="side-title">確認していただきたい点</h2>
-          <ol class="side-list">
-            <li><span class="num">1</span><span>従業員がスマホ・PCから希望を入力できるか。</span></li>
-            <li><span class="num">2</span><span>提出済み・未提出を管理者が把握しやすいか。</span></li>
-            <li><span class="num">3</span><span>希望休・有休・勤務不可を守った仮シフトになっているか。</span></li>
-            <li><span class="num">4</span><span>AM・金銭キー・必要人数・日別イベントを考慮できそうか。</span></li>
-          </ol>
-          <div class="copy-row" aria-label="デモURLコピー">
-            <div class="url-box" id="demoUrl">https://kanosorahanasachi-alt.github.io/shift-management-demo/</div>
-            <button class="small-button" type="button" onclick="copyDemoUrl()">URLコピー</button>
-          </div>
-        </aside>
+  <div class="page">
+    <header class="header">
+      <div class="header-inner">
+        <div class="logo">試</div>
+        <div class="site-title">シフト作成補助 試作版</div>
       </div>
-    </section>
+    </header>
 
-    <main>
-      <section class="card" id="demo">
-        <div class="section-head">
-          <div>
-            <p class="section-kicker">試作版の入口</p>
-            <h2>3つの画面で流れを確認できます</h2>
-            <p class="sub">従業員側、管理者側、掲示・印刷用の順で確認すると、勤務希望の提出から仮シフト作成までの流れが分かりやすくなります。</p>
+    <main class="main">
+      <section class="hero">
+        <div class="label">勤務希望収集・仮シフト作成・掲示印刷の試作デモ</div>
+
+        <h1>3つの画面で、シフト作成補助の流れを確認できます。</h1>
+
+        <p class="hero-text">
+          このページは、勤務希望の入力から、管理者による仮シフト作成、掲示・印刷用シフト表の確認までを
+          簡単に見ていただくための試作版入口です。
+        </p>
+      </section>
+
+      <section id="guide" class="section">
+        <div class="section-label">試作版の入口</div>
+
+        <h2>まずは上から順番にご確認ください</h2>
+
+        <p class="lead-text">
+          ① 従業員が希望を入力する、② 管理者が希望を確認して仮シフトを作成する、
+          ③ 完成したシフトを掲示・印刷用に確認する、という流れを想定しています。
+        </p>
+
+        <div class="flow-guide">
+          <div class="flow-step">
+            <span class="flow-number">1</span>
+            <div>
+              <strong>従業員が希望を入力</strong>
+              <p>スマホまたはPCから、希望休・有休・勤務不可などを入力する画面です。</p>
+            </div>
+          </div>
+
+          <div class="flow-step">
+            <span class="flow-number">2</span>
+            <div>
+              <strong>管理者が仮シフトを作成</strong>
+              <p>提出状況や必要人数、AM・金銭キー、連勤、勤務間インターバルを確認します。</p>
+            </div>
+          </div>
+
+          <div class="flow-step">
+            <span class="flow-number">3</span>
+            <div>
+              <strong>掲示・印刷用に確認</strong>
+              <p>完成したシフトを、掲示・印刷しやすい形で確認します。</p>
+            </div>
           </div>
         </div>
 
-        <div class="demo-grid">
+        <div class="demo-card-grid">
           <article class="demo-card">
-            <span class="demo-label">従業員側</span>
+            <div class="card-badge">従業員側</div>
             <h3>スマホ希望入力デモ</h3>
-            <p>従業員が自分の端末から勤務希望を入力する画面です。紙で提出した内容を本人が忘れる問題や、提出状況の確認負担を減らすことを想定しています。</p>
-            <a class="btn primary" href="shift_request_demo_15staff.html">従業員用デモを開く</a>
+            <p>
+              従業員が自分の端末から勤務希望を入力する画面です。
+              紙で提出した内容を本人が忘れる問題や、提出状況の確認負担を減らすことを想定しています。
+            </p>
+            <a class="demo-button" href="employee.html">
+              従業員用デモを開く
+            </a>
           </article>
 
           <article class="demo-card">
-            <span class="demo-label">管理者側</span>
+            <div class="card-badge">管理者側</div>
             <h3>仮シフト自動生成デモ</h3>
-            <p>管理者が希望データを確認し、必要人数・AM・金銭キー・連勤・勤務間インターバルなどを考慮しながら仮シフトを作成する画面です。</p>
-            <a class="btn primary" href="shift_auto_generate_demo_v3_logic.html">管理者用デモを開く</a>
+            <p>
+              管理者が希望データを確認し、必要人数・AM・金銭キー・連勤・勤務間インターバルなどを
+              考慮しながら仮シフトを作成する画面です。
+            </p>
+            <a class="demo-button" href="admin.html">
+              管理者用デモを開く
+            </a>
           </article>
 
           <article class="demo-card">
-            <span class="demo-label">掲示・印刷</span>
+            <div class="card-badge">掲示・印刷</div>
             <h3>掲示・印刷用シフト表デモ</h3>
-            <p>完成したシフトを掲示・印刷しやすい形で確認する画面です。既存Excel運用やA3横印刷に近い見え方を意識しています。</p>
-            <a class="btn primary" href="shift_print_preview_color_demo.html">印刷用デモを開く</a>
+            <p>
+              完成したシフトを掲示・印刷しやすい形で確認する画面です。
+              既存Excel運用やA3横印刷に近い見え方を意識しています。
+            </p>
+            <a class="demo-button" href="print.html">
+              印刷用デモを開く
+            </a>
           </article>
         </div>
-      </section>
 
-      <section class="card" id="guide">
-        <div class="section-head">
-          <div>
-            <p class="section-kicker">確認手順</p>
-            <h2>まずはこの順番で確認してください</h2>
-            <p class="sub">細かい説明よりも、最初にどこを押して何を見ればよいかが分かるようにしています。</p>
-          </div>
-        </div>
-
-        <div class="steps">
-          <div class="step">
-            <div>
-              <h3>従業員用デモを開く</h3>
-              <p>サンプル社員番号 1001〜1010 を使って、希望休・有休・勤務不可などを入力する流れを確認します。</p>
-            </div>
-          </div>
-          <div class="step">
-            <div>
-              <h3>提出状況を見る</h3>
-              <p>管理側で、提出済み・未提出・再提出の有無を確認できるかを見ます。</p>
-            </div>
-          </div>
-          <div class="step">
-            <div>
-              <h3>仮シフトを自動生成する</h3>
-              <p>希望休、有休、勤務不可、必要人数、AM、金銭キー、連勤、勤務間インターバルなどの条件を考慮できるかを確認します。</p>
-            </div>
-          </div>
-          <div class="step">
-            <div>
-              <h3>警告と不足を確認する</h3>
-              <p>不足している日、役割者が足りない日、修正が必要な箇所が分かりやすいかを見ます。</p>
-            </div>
-          </div>
-          <div class="step">
-            <div>
-              <h3>印刷用シフト表を見る</h3>
-              <p>最終的に掲示・印刷・既存Excel運用へつなげられそうかを確認します。</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="card">
-        <div class="section-head">
-          <div>
-            <p class="section-kicker">現状と改善後のイメージ</p>
-            <h2>毎月発生する確認・転記・判断の負担を減らす</h2>
-            <p class="sub">この試作版の目的は、シフト作成を人の判断から切り離すことではなく、確認漏れや転記負担を減らし、最終判断をしやすくすることです。</p>
-          </div>
-        </div>
-
-        <div class="comparison">
-          <div class="compare-box before">
-            <h3>現状：紙・目視・経験依存</h3>
-            <ul>
-              <li>紙で希望を提出するため、本人が提出内容を忘れやすい。</li>
-              <li>提出済み・未提出の確認に手間がかかる。</li>
-              <li>希望休・有休・勤務不可を目視で確認する必要がある。</li>
-              <li>AM・金銭キー・必要人数などを同時に確認する負担が大きい。</li>
-              <li>入替・棚卸・研修・事業所訪問などの日別事情が属人的になりやすい。</li>
-            </ul>
-          </div>
-          <div class="compare-box after">
-            <h3>改善後：入力・一覧・自動チェック</h3>
-            <ul>
-              <li>スマホまたはPCから希望を入力できる。</li>
-              <li>提出済み・未提出を一覧で確認できる。</li>
-              <li>希望休・有休・勤務不可を仮シフト作成時に除外できる。</li>
-              <li>役割者や必要人数の不足を警告として見える化できる。</li>
-              <li>日別イベントを登録し、必要人数や勤務区分に反映しやすくなる。</li>
-            </ul>
-          </div>
-        </div>
-      </section>
-
-      <section class="card" id="checks">
-        <div class="section-head">
-          <div>
-            <p class="section-kicker">確認項目</p>
-            <h2>仮シフト作成後に見える化したい内容</h2>
-            <p class="sub">仮シフトの良し悪しは、表だけでは分かりにくいため、「守れた条件」「不足している条件」「人の修正が必要な箇所」を確認できる形にします。</p>
-          </div>
-        </div>
-
-        <div class="status-grid">
-          <div class="status-card">
-            <div class="label">希望休違反</div>
-            <div class="value ok">0</div>
-            <div class="note">希望休・有休・勤務不可に勤務を入れていないか。</div>
-          </div>
-          <div class="status-card">
-            <div class="label">インターバル違反</div>
-            <div class="value ok">0</div>
-            <div class="note">勤務間インターバルが不足していないか。</div>
-          </div>
-          <div class="status-card">
-            <div class="label">役割者不足</div>
-            <div class="value warn">要確認</div>
-            <div class="note">AM・金銭キーの最低人数を満たしているか。</div>
-          </div>
-          <div class="status-card">
-            <div class="label">必要人数不足</div>
-            <div class="value warn">要確認</div>
-            <div class="note">早番・中番・遅番・入替の必要人数を満たしているか。</div>
-          </div>
-        </div>
-      </section>
-
-      <section class="card">
-        <div class="section-head">
-          <div>
-            <p class="section-kicker">サンプル条件</p>
-            <h2>社員番号と役割のイメージ</h2>
-            <p class="sub">実名は使わず、役割や勤務可能条件だけをサンプル化することで、自店に置き換えた場合のイメージを確認しやすくします。</p>
-          </div>
-        </div>
-
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>社員番号</th>
-                <th>想定役割</th>
-                <th>勤務傾向</th>
-                <th>確認ポイント</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>1001</td>
-                <td><span class="tag green">AM</span><span class="tag green">金銭キー</span></td>
-                <td>早番・遅番どちらも対応</td>
-                <td>役割者を優先配置する動きの確認。</td>
-              </tr>
-              <tr>
-                <td>1002</td>
-                <td><span class="tag green">金銭キー</span></td>
-                <td>早番中心</td>
-                <td>早番の金銭キー不足を補えるか。</td>
-              </tr>
-              <tr>
-                <td>1003</td>
-                <td><span class="tag">一般</span></td>
-                <td>遅番中心</td>
-                <td>希望や勤務帯の偏りをどう扱うか。</td>
-              </tr>
-              <tr>
-                <td>1004</td>
-                <td><span class="tag amber">入替可</span></td>
-                <td>入替勤務対応</td>
-                <td>入替翌日の自動休みが反映されるか。</td>
-              </tr>
-              <tr>
-                <td>1005〜1010</td>
-                <td><span class="tag">一般</span><span class="tag amber">一部条件あり</span></td>
-                <td>早番・中番・遅番の組み合わせ</td>
-                <td>必要人数・連勤・希望反映のバランス確認。</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="card">
-        <div class="section-head">
-          <div>
-            <p class="section-kicker">条件整理</p>
-            <h2>必須条件と優先条件を分ける</h2>
-            <p class="sub">自動生成ロジックを実務に近づけるには、「絶対に破ってはいけない条件」と「できれば守りたい条件」を分ける必要があります。</p>
-          </div>
-        </div>
-
-        <div class="two-col">
-          <div class="mini-card">
-            <h3>必須条件</h3>
-            <ul>
-              <li>希望休・有休・勤務不可に勤務を入れない。</li>
-              <li>連勤上限を超えない。</li>
-              <li>勤務間インターバルを下回らない。</li>
-              <li>入替勤務の翌日は休みにする。</li>
-              <li>必要なAM・金銭キー要員を配置する。</li>
-              <li>必要人数0の日・勤務区分には配置しない。</li>
-            </ul>
-          </div>
-          <div class="mini-card">
-            <h3>優先条件</h3>
-            <ul>
-              <li>できれば3日程度の勤務ブロックにする。</li>
-              <li>できれば同じ勤務帯を連続させる。</li>
-              <li>本人希望に近づける。</li>
-              <li>中番を使って薄い時間帯を補う。</li>
-              <li>特定スタッフに勤務が偏りすぎないようにする。</li>
-              <li>着任直後のSMでも判断しやすい形にする。</li>
-            </ul>
-          </div>
-        </div>
-      </section>
-
-      <section class="card">
-        <div class="section-head">
-          <div>
-            <p class="section-kicker">日別イベント</p>
-            <h2>通常日と異なる条件を反映する</h2>
-            <p class="sub">通常日と違う業務がある日は、必要人数や勤務時間帯を補正する必要があります。イベント登録によって、経験則を仕組みに落とし込みやすくします。</p>
-          </div>
-        </div>
-
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>イベント</th>
-                <th>想定される影響</th>
-                <th>シフト上の補正例</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>入替</td>
-                <td>夜間・日跨ぎ勤務が発生する。</td>
-                <td><span class="tag amber">入替番</span>を追加し、翌日は自動休みにする。</td>
-              </tr>
-              <tr>
-                <td>棚卸</td>
-                <td>通常業務とは別に確認・作業時間が発生する。</td>
-                <td>早番または中番の必要人数を補正する。</td>
-              </tr>
-              <tr>
-                <td>研修</td>
-                <td>対象者が一時的に現場から抜ける。</td>
-                <td>研修時間帯の不足を警告し、中番や代替配置を検討する。</td>
-              </tr>
-              <tr>
-                <td>事業所訪問</td>
-                <td>通常クルーが店外業務で一時的に抜ける可能性がある。</td>
-                <td>中番配置、または該当時間帯の必要人数増で補う。</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="card" id="flow">
-        <div class="section-head">
-          <div>
-            <p class="section-kicker">実務フロー</p>
-            <h2>実務で使う場合の流れ</h2>
-            <p class="sub">いきなり全自動システムにするのではなく、現在の運用を大きく変えずに、確認作業と仮シフト作成を補助する形が現実的です。</p>
-          </div>
-        </div>
-
-        <div class="flow">
-          <div class="flow-item"><strong>希望入力</strong><span>従業員がスマホ・PCから希望を入力。</span></div>
-          <div class="flow-item"><strong>提出確認</strong><span>管理者が提出済み・未提出を確認。</span></div>
-          <div class="flow-item"><strong>仮生成</strong><span>必須条件を守って仮シフトを作成。</span></div>
-          <div class="flow-item"><strong>警告確認</strong><span>不足・違反・修正候補を一覧化。</span></div>
-          <div class="flow-item"><strong>人が修正</strong><span>SM・作成者が現場判断で調整。</span></div>
-          <div class="flow-item"><strong>出力</strong><span>掲示・印刷・既存Excelへ反映。</span></div>
-        </div>
-      </section>
-
-      <section class="card">
-        <div class="section-head">
-          <div>
-            <p class="section-kicker">期待できる効果</p>
-            <h2>小さな負担を継続的に減らす</h2>
-            <p class="sub">大きな設備投資や大幅な人員削減ではなく、毎月繰り返される小さな負担を減らすことを狙います。</p>
-          </div>
-        </div>
-
-        <div class="metric-grid">
-          <div class="metric"><strong>提出確認</strong><span>紙の確認・転記・未提出確認の負担を軽減。</span></div>
-          <div class="metric"><strong>条件確認</strong><span>希望休・有休・勤務不可・役割者不足を見える化。</span></div>
-          <div class="metric"><strong>品質平準化</strong><span>担当者ごとの判断のばらつきを減らす。</span></div>
-          <div class="metric"><strong>全店展開時</strong><span>仮に1店舗あたり月1時間でも削減できれば、全体では大きな改善余地。</span></div>
-        </div>
-      </section>
-
-      <section class="card" id="risk">
-        <div class="section-head">
-          <div>
-            <p class="section-kicker">実務化する場合</p>
-            <h2>会社管理環境での検証が必要です</h2>
-            <p class="sub">このデモは個人作成の試作版です。正式導入する場合は、会社管理環境での検証・権限管理・個人情報管理が必要です。</p>
-          </div>
-        </div>
-
-        <div class="two-col">
-          <div class="mini-card">
-            <h3>デモ版の前提</h3>
-            <ul>
-              <li>すべてサンプルデータで構成。</li>
-              <li>実際の従業員情報・勤務希望は含まない。</li>
-              <li>GitHub Pages上の静的Webページ。</li>
-              <li>個人作成の試作であり、正式運用環境ではない。</li>
-              <li>実運用データを入力しない。</li>
-            </ul>
-          </div>
-          <div class="mini-card">
-            <h3>正式運用で必要な確認</h3>
-            <ul>
-              <li>会社管理のクラウド・社内システムで運用する。</li>
-              <li>誰がデータを閲覧・編集できるかを決める。</li>
-              <li>保存場所・保存期間・削除ルールを決める。</li>
-              <li>退職者・異動者の権限管理を行う。</li>
-              <li>有休申請や勤怠ルールとの整合性を確認する。</li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="notice" style="margin-top:16px;">
-          <strong>重要：</strong>スマホ希望収集を実運用する場合、個人のGoogleアカウントや個人管理の仕組みではなく、会社が管理する環境で扱う必要があります。この試作版は、あくまで操作感と考え方を確認するためのデモです。
-        </div>
-      </section>
-
-      <section class="card">
-        <div class="section-head">
-          <div>
-            <p class="section-kicker">今後の改善案</p>
-            <h2>段階的に試作レベルを上げる</h2>
-            <p class="sub">次にレベルを上げるなら、機能追加よりも先に「見た人が迷わず触れる導線」と「結果の分かりやすさ」を整えるのが効果的です。</p>
-          </div>
-        </div>
-
-        <div class="roadmap">
-          <div class="roadmap-item">
-            <span class="priority">優先A</span>
-            <div>
-              <h3>トップ導線・確認手順・チェック結果の強化</h3>
-              <p>デモを開いた人が、どの順番で何を確認すればよいか分かるようにします。</p>
-            </div>
-          </div>
-          <div class="roadmap-item">
-            <span class="priority">優先B</span>
-            <div>
-              <h3>現状と改善後の比較・効果イメージの追加</h3>
-              <p>紙運用からデジタル補助に変わることで、何が楽になるのかを一目で伝えます。</p>
-            </div>
-          </div>
-          <div class="roadmap-item">
-            <span class="priority">優先C</span>
-            <div>
-              <h3>自動生成理由・手修正後の再チェック</h3>
-              <p>なぜその配置になったか、どこを直せばよいかを見える化します。</p>
-            </div>
-          </div>
-          <div class="roadmap-item">
-            <span class="priority">優先D</span>
-            <div>
-              <h3>会社管理環境への移管検討</h3>
-              <p>Microsoft 365、SharePoint、Forms、Excel Online、kintone、社内ポータルなど、会社側で管理できる環境を検討します。</p>
-            </div>
-          </div>
+        <div class="notice">
+          <strong>確認用の試作版です。</strong><br />
+          表示される内容はサンプルデータです。ログイン不要・個人情報の入力不要で、まずは全体の流れを確認していただくことを目的としています。
         </div>
       </section>
     </main>
+
+    <footer class="footer">
+      シフト作成補助 試作版 / GitHub Pages 確認用ページ
+    </footer>
   </div>
-
-  <footer class="footer">
-    <div class="page">
-      shift-management-demo / GitHub Pages 試作版 — 正式運用環境ではありません<br />
-      表示される従業員・勤務情報はすべてサンプルデータです。
-    </div>
-  </footer>
-
-  <div class="toast" id="toast">URLをコピーしました</div>
-
-  <script>
-    function copyDemoUrl() {
-      const url = document.getElementById('demoUrl').textContent.trim();
-      if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(url).then(showToast).catch(fallbackCopy);
-      } else {
-        fallbackCopy();
-      }
-
-      function fallbackCopy() {
-        const textarea = document.createElement('textarea');
-        textarea.value = url;
-        textarea.style.position = 'fixed';
-        textarea.style.left = '-9999px';
-        document.body.appendChild(textarea);
-        textarea.focus();
-        textarea.select();
-        try {
-          document.execCommand('copy');
-          showToast();
-        } catch (e) {
-          alert('コピーできませんでした。URLを選択してコピーしてください。');
-        }
-        document.body.removeChild(textarea);
-      }
-    }
-
-    function showToast() {
-      const toast = document.getElementById('toast');
-      toast.classList.add('show');
-      window.clearTimeout(window.__toastTimer);
-      window.__toastTimer = window.setTimeout(() => {
-        toast.classList.remove('show');
-      }, 1800);
-    }
-  </script>
 </body>
 </html>
