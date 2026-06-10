@@ -144,6 +144,13 @@ table.shift-sheet{border-collapse:collapse;width:max-content;min-width:100%;font
 #quickTemplates button{display:block;width:100%;margin-bottom:4px;font-size:12px;padding:6px 8px;text-align:left}
 #quickTemplates button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 .settings-id-col{font-family:Consolas,"Courier New",monospace;font-size:11px;color:var(--text-dim)}
+.toolbar-menu{position:relative}
+.toolbar-menu>summary{list-style:none;cursor:pointer;border:1px solid var(--border2);background:var(--surface2);color:var(--text-muted);padding:8px 14px;border-radius:7px;font-weight:700;font-size:13px;user-select:none}
+.toolbar-menu>summary::-webkit-details-marker{display:none}
+.toolbar-menu[open]>summary{border-color:var(--accent);color:var(--accent);background:#e8f0fc}
+.toolbar-menu .menu-panel{position:absolute;top:calc(100% + 6px);left:0;z-index:60;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 10px 28px rgba(0,0,0,.18);padding:8px;display:flex;flex-direction:column;gap:6px;min-width:260px}
+.toolbar-menu .menu-panel button{text-align:left;width:100%}
+.menu-divider{border-top:1px solid var(--border);margin:2px 0}
 </style>
 </head>
 <body>
@@ -174,21 +181,27 @@ table.shift-sheet{border-collapse:collapse;width:max-content;min-width:100%;font
       <span id="currentPresetDisplay" style="font-weight:700;font-size:12px;color:var(--accent);background:#e8f0fc;padding:6px 12px;border-radius:5px;border:1px solid #b0c8f0;" data-preset="現行デモ設定">現在：現行デモ設定</span>
     </div>
     <button class="primary" onclick="generateShift()">▶ 仮シフトを自動生成</button>
-    <button class="success" onclick="generateShift()">サンプルを表示</button>
-    <button class="danger"  onclick="clearGenerated()">✕ 自動生成分クリア</button>
-    <button onclick="downloadCsv()">↓ 会社Excel用CSV</button>
     <button onclick="window.print()">🖨 A3横で印刷</button>
-    <div style="border-left:1px solid var(--border);height:24px;margin:0 6px;"></div>
-    <button onclick="document.getElementById('storeMasterInput').click()">📂 店舗マスタJSON読込</button>
-    <button onclick="saveStoreMasterJson()">💾 店舗マスタJSON保存</button>
-    <button onclick="document.getElementById('shiftRequestsInput').click()">📋 希望データJSON読込</button>
-    <button onclick="saveShiftRequestsJson()">📝 希望データJSON保存</button>
-    <button onclick="clearShiftRequests()">🗑 希望データをクリア</button>
-    <button class="danger" onclick="resetWorkData()">⟲ 作業データを全消去（初期デモに戻す）</button>
+    <button onclick="downloadCsv()">↓ 会社Excel用CSV</button>
+    <details class="toolbar-menu" id="dataMenu">
+      <summary>📁 データ管理 ▾</summary>
+      <div class="menu-panel">
+        <button onclick="clearGenerated();document.getElementById('dataMenu').open=false">✕ 自動生成分をクリア</button>
+        <div class="menu-divider"></div>
+        <button onclick="document.getElementById('storeMasterInput').click();document.getElementById('dataMenu').open=false">📂 店舗マスタJSON読込</button>
+        <button onclick="saveStoreMasterJson();document.getElementById('dataMenu').open=false">💾 店舗マスタJSON保存</button>
+        <button onclick="document.getElementById('shiftRequestsInput').click();document.getElementById('dataMenu').open=false">📋 希望データJSON読込</button>
+        <button onclick="saveShiftRequestsJson();document.getElementById('dataMenu').open=false">📝 希望データJSON保存</button>
+        <button onclick="clearShiftRequests();document.getElementById('dataMenu').open=false">🗑 希望データをクリア</button>
+        <div class="menu-divider"></div>
+        <button class="danger" onclick="resetWorkData()">⟲ 作業データを全消去（初期デモに戻す）</button>
+      </div>
+    </details>
     <span id="autosaveStatus" style="font-size:11px;color:var(--text-dim);font-weight:700;">自動保存：有効</span>
     <input type="file" id="storeMasterInput" accept=".json" style="display:none;" onchange="handleStoreMasterFile(this.files[0])">
     <input type="file" id="shiftRequestsInput" accept=".json" style="display:none;" onchange="handleShiftRequestsFile(this.files[0])">
   </div>
+
 
   <div class="status-cards">
     <div class="status-card blue">  <div class="label">登録人数</div>   <div class="num">15名</div></div>
@@ -287,6 +300,10 @@ table.shift-sheet{border-collapse:collapse;width:max-content;min-width:100%;font
       <div class="staff-settings-table-wrap">
         <table id="staffSettingsTable" class="staff-settings-table"></table>
       </div>
+      <div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
+        <button class="success" onclick="addStaff()">＋ スタッフを追加</button>
+        <span style="font-size:11px;color:var(--text-dim);">追加直後は「自動生成：対象外」です。社員コード・氏名を入力し、対象にする場合はチェックを入れてください。予備枠は対象外のままにしておけばシフトに組み込まれません。</span>
+      </div>
     </div>
   </details>
 
@@ -348,28 +365,28 @@ const PRESETS={
     early:{required:4},
     middle:{normalRequired:1,eventRequired:2},
     late:{required:4},
-    changeover:{day15:2,day29:1}
+    changeover:{}
   },
   "160時間寄せ設定":{
     name:"160時間寄せ設定",
     early:{required:4},
     middle:{normalRequired:0,eventRequired:1},
     late:{required:4},
-    changeover:{day15:2,day29:1}
+    changeover:{}
   },
   "最小人数テスト設定":{
     name:"最小人数テスト設定",
     early:{required:3},
     middle:{normalRequired:0,eventRequired:0},
     late:{required:3},
-    changeover:{day15:1,day29:0}
+    changeover:{}
   },
   "人員厚め設定":{
     name:"人員厚め設定",
     early:{required:4},
     middle:{normalRequired:1,eventRequired:1},
     late:{required:4},
-    changeover:{day15:2,day29:1}
+    changeover:{}
   }
 };
 
@@ -910,7 +927,7 @@ function changePreset(presetName){
 
 function downloadCsv(){const header=["社員番号","氏名","区分",...days.map(d=>`${monthDayLabel(d)}`),...days.map(d=>`${monthDayLabel(d)}(時刻)`)];const lines=[header.join(",")];staffList.forEach(st=>{const shiftCells=days.map(day=>{const tmplId=templateMatrix[st.id]&&templateMatrix[st.id][day]?templateMatrix[st.id][day]:getDefaultTemplate(shiftMatrix[st.id][day]);const tmpl=shiftTemplates[tmplId];if(tmpl){return`${shiftDefs[shiftMatrix[st.id][day]]?.label||""}`}else{return shiftDefs[shiftMatrix[st.id][day]]?.label||""}});const timeCells=days.map(day=>{const tmplId=templateMatrix[st.id]&&templateMatrix[st.id][day]?templateMatrix[st.id][day]:getDefaultTemplate(shiftMatrix[st.id][day]);const tmpl=shiftTemplates[tmplId];if(tmpl){return`${tmpl.start}-${tmpl.end}`}else{return""}});lines.push([st.id,st.name,st.role,...shiftCells,...timeCells].join(","))});const blob=new Blob(["\uFEFF"+lines.join("\n")],{type:"text/csv;charset=utf-8;"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="shift_"+planMonthKey()+".csv";a.click();URL.revokeObjectURL(url)}
 
-document.addEventListener("click",e=>{const menu=document.getElementById("quickMenu");if(!menu.contains(e.target))hideQuickMenu()});
+document.addEventListener("click",e=>{const menu=document.getElementById("quickMenu");if(!menu.contains(e.target))hideQuickMenu();const dm=document.getElementById("dataMenu");if(dm&&dm.open&&!dm.contains(e.target))dm.open=false});
 
 // ── スタッフ設定テーブルをレンダリング
 function renderStaffSettings(){
@@ -921,7 +938,7 @@ function renderStaffSettings(){
   // ヘッダー行
   const thead=document.createElement("thead");
   const headerRow=document.createElement("tr");
-  const headers=["社員コード","氏名","役割","自動生成","現場人数","AM対応","金銭キー","入替対応","人数換算","目標勤務時間","目標勤務日数","希望傾向","勤務制限","備考"];
+  const headers=["社員コード","氏名","役割","自動生成","現場人数","AM対応","金銭キー","入替対応","人数換算","目標勤務時間","目標勤務日数","希望傾向","勤務制限","備考","操作"];
   headers.forEach(h=>{
     const th=document.createElement("th");
     th.textContent=h;
@@ -1095,6 +1112,15 @@ function renderStaffSettings(){
     noteTd.appendChild(noteInput);
     tr.appendChild(noteTd);
     
+    // 操作（削除）【v5.2】
+    const opTd=document.createElement("td");
+    const delBtn=document.createElement("button");
+    delBtn.className="danger";
+    delBtn.textContent="削除";
+    delBtn.onclick=()=>deleteStaff(st.id);
+    opTd.appendChild(delBtn);
+    tr.appendChild(opTd);
+    
     tbody.appendChild(tr);
   });
   table.appendChild(tbody);
@@ -1259,6 +1285,43 @@ function updateStaffSetting(staffId,field,value){
   else if(field==="target")st.target=value;
   else if(field==="pref")st.pref=value;
   else if(field==="note")st.note=value;
+  saveWorkData();
+}
+
+// ════════════════════════════════════════════════════════════
+// スタッフの追加・削除【v5.2】
+// ════════════════════════════════════════════════════════════
+function addStaff(){
+  let n=1;while(staffList.some(s=>s.id==="新規"+n))n++;
+  const id="新規"+n;
+  const st={id,name:"（新規スタッフ"+n+"）",role:"Cr",auto:false,countForFloor:true,am:false,key:false,changeover:false,weight:1,target:20,targetHours:160,pref:"none",note:"",allowedShiftTypes:[],staffType:"floor"};
+  staffList.push(st);
+  shiftMatrix[id]={};templateMatrix[id]={};cellTags[id]={};
+  days.forEach(day=>{shiftMatrix[id][day]="blank";templateMatrix[id][day]=null;cellTags[id][day]=[]});
+  requestMap[id]={off:[],paid:[],unavailable:[],early:[],late:[]};
+  applyFixed();
+  renderStaffSettings();
+  renderSubmissionStatus();
+  buildSheet();
+  saveWorkData();
+}
+function deleteStaff(staffId){
+  const st=staffList.find(s=>s.id===staffId);
+  if(!st)return;
+  if(staffList.length<=1){alert("スタッフは最低1名必要です。");return}
+  let msg="スタッフ「"+st.name+"（"+st.id+"）」を削除します。\nこのスタッフのシフト・希望データ・提出状況も削除されます。";
+  if(submissionLog[staffId])msg+="\n※今月の希望提出済みです。";
+  if(!confirm(msg+"\nよろしいですか？"))return;
+  staffList=staffList.filter(s=>s.id!==staffId);
+  delete shiftMatrix[staffId];
+  delete templateMatrix[staffId];
+  delete cellTags[staffId];
+  delete requestMap[staffId];
+  delete submissionLog[staffId];
+  renderStaffSettings();
+  renderSubmissionStatus();
+  buildSheet();
+  if(generated){validateFinal();updateCards();renderWarnings();noticeRegenerate("スタッフ削除")}
   saveWorkData();
 }
 
