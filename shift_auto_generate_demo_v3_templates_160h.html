@@ -140,6 +140,10 @@ table.shift-sheet{border-collapse:collapse;width:max-content;min-width:100%;font
   .circle-mark{width:18px!important;height:18px!important;font-size:8px!important;}
 }
 
+.quick-menu-subtitle{font-size:10px;font-weight:700;color:var(--text-dim);margin:8px 0 4px;border-top:1px solid var(--border);padding-top:8px;letter-spacing:.06em}
+#quickTemplates button{display:block;width:100%;margin-bottom:4px;font-size:12px;padding:6px 8px;text-align:left}
+#quickTemplates button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.settings-id-col{font-family:Consolas,"Courier New",monospace;font-size:11px;color:var(--text-dim)}
 </style>
 </head>
 <body>
@@ -219,6 +223,41 @@ table.shift-sheet{border-collapse:collapse;width:max-content;min-width:100%;font
     </div>
   </details>
 
+  <details class="daily-requirement-section">
+    <summary>▼ イベント種別テンプレート設定（追加・編集・削除）</summary>
+    <div class="daily-requirement-content">
+      <div class="daily-requirement-note">イベント種別ごとの基本必要人数を定義します。日別必要人数は <strong>手入力値 → ここで定義した種別の値 → 必要人数プリセット</strong> の順で決まります（プリセットは通常日・土日の人数と「イベント日扱い」種別の中番に適用）。「通常日」「土日（自動）」は曜日自動判定の基盤のため削除できません（数値・名称の編集は可）。種別を削除すると、その種別が設定されていた日は通常日に戻ります。変更はこのブラウザに自動保存され、店舗マスタJSONにも含まれます。</div>
+      <div class="daily-requirement-table-wrap">
+        <table id="eventTypeSettingsTable" class="daily-requirement-table"></table>
+      </div>
+      <div style="margin-top:8px;">
+        <button class="success" onclick="addEventType()">＋ イベント種別を追加</button>
+      </div>
+    </div>
+  </details>
+
+  <details class="daily-requirement-section">
+    <summary>▼ 勤務テンプレート設定（追加・編集・削除）</summary>
+    <div class="daily-requirement-content">
+      <div class="daily-requirement-note">勤務区分ごとの開始・終了時刻パターンを定義します。終了が24時を超える場合は <strong>25:00（=翌1:00）</strong> のように表記します（29:00まで）。「標準」のテンプレートが自動生成時に割り当てられ、生成後はシフト表のセルをクリックして個別に変更できます。各区分には最低1つのテンプレートが必要です。</div>
+      <div class="daily-requirement-table-wrap">
+        <table id="shiftTemplateSettingsTable" class="daily-requirement-table"></table>
+      </div>
+      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <select id="newTemplateGroup" style="padding:7px 8px;border:1px solid var(--border2);border-radius:7px;background:var(--surface2);font-family:inherit;font-size:13px;">
+          <option value="early">早番</option>
+          <option value="middle">中番</option>
+          <option value="late">遅番</option>
+          <option value="changeover">入替</option>
+        </select>
+        <input id="newTemplateStart" placeholder="開始 例 09:00" style="width:120px;padding:7px 8px;border:1px solid var(--border2);border-radius:7px;font-size:13px;">
+        <input id="newTemplateEnd" placeholder="終了 例 18:00" style="width:120px;padding:7px 8px;border:1px solid var(--border2);border-radius:7px;font-size:13px;">
+        <button class="success" onclick="addShiftTemplate()">＋ テンプレートを追加</button>
+        <button class="danger" onclick="resetLocalSettings()" style="margin-left:auto;">⟲ 種別・テンプレ設定を初期値に戻す</button>
+      </div>
+    </div>
+  </details>
+
   <details class="staff-settings-details">
     <summary class="staff-settings-summary">▼ スタッフ設定</summary>
     <div class="staff-settings-container">
@@ -256,6 +295,7 @@ table.shift-sheet{border-collapse:collapse;width:max-content;min-width:100%;font
       <button onclick="changeSelectedShift('paid')">有休</button>
       <button onclick="changeSelectedShift('blank')">空白</button>
     </div>
+    <div id="quickTemplates"></div>
     <button class="close-btn" onclick="hideQuickMenu()">閉じる</button>
   </div>
 </div>
@@ -305,37 +345,24 @@ const PRESETS={
 
 
 
-const DAILY_EVENT_TYPE_LABELS={
-  normal:"通常日",
-  event:"イベント日",
-  newMachineFirst:"新台入替初日",
-  newMachineWork:"入替作業日",
-  businessVisit:"事業所訪問",
-  meeting:"会議日",
-  managerMeeting:"役職会議日"
+// ── イベント種別定義（追加・編集・削除できるデータとして保持）【機能追加】
+// system:true        … 曜日自動判定の基盤のため削除不可（数値・名称の編集は可）
+// managerAll:true    … その日は SM・AM 全員の出勤を試みる（旧 managerMeeting 固有処理の汎用化）
+// presetEventLike:true … 必要人数プリセットの middle.eventRequired を適用する日
+const BUILTIN_EVENT_TYPE_DEFS={
+  normal:{id:"normal",label:"通常日",short:"",early:3,middle:0,late:3,changeover:0,system:true,managerAll:false,presetEventLike:false},
+  weekend:{id:"weekend",label:"土日（自動）",short:"",early:3,middle:1,late:3,changeover:0,system:true,managerAll:false,presetEventLike:false},
+  event:{id:"event",label:"イベント日",short:"イベ",early:4,middle:1,late:4,changeover:0,system:false,managerAll:false,presetEventLike:true},
+  newMachineFirst:{id:"newMachineFirst",label:"新台入替初日",short:"新台",early:3,middle:1,late:3,changeover:0,system:false,managerAll:false,presetEventLike:true},
+  newMachineWork:{id:"newMachineWork",label:"入替作業日",short:"入替",early:3,middle:0,late:3,changeover:2,system:false,managerAll:false,presetEventLike:false},
+  businessVisit:{id:"businessVisit",label:"事業所訪問",short:"事訪",early:3,middle:1,late:3,changeover:0,system:false,managerAll:false,presetEventLike:false},
+  meeting:{id:"meeting",label:"会議日",short:"会議",early:3,middle:0,late:3,changeover:0,system:false,managerAll:false,presetEventLike:false},
+  managerMeeting:{id:"managerMeeting",label:"役職会議日",short:"役会",early:3,middle:0,late:3,changeover:0,system:false,managerAll:true,presetEventLike:false}
 };
-
-const DAILY_EVENT_TYPE_SHORT={
-  normal:"",
-  event:"イベ",
-  newMachineFirst:"新台",
-  newMachineWork:"入替",
-  businessVisit:"事訪",
-  meeting:"会議",
-  managerMeeting:"役会",
-  weekend:""
-};
-
-const DAILY_REQUIREMENT_TEMPLATES={
-  normal:{early:3,middle:0,late:3,changeover:0},
-  weekend:{early:3,middle:1,late:3,changeover:0},
-  event:{early:4,middle:1,late:4,changeover:0},
-  newMachineFirst:{early:3,middle:1,late:3,changeover:0},
-  newMachineWork:{early:3,middle:0,late:3,changeover:2},
-  businessVisit:{early:3,middle:1,late:3,changeover:0},
-  meeting:{early:3,middle:0,late:3,changeover:0},
-  managerMeeting:{early:3,middle:0,late:3,changeover:0}
-};
+function cloneData(o){return JSON.parse(JSON.stringify(o))}
+let eventTypeDefs=cloneData(BUILTIN_EVENT_TYPE_DEFS);
+function eventTypeLabel(t){return eventTypeDefs[t]?eventTypeDefs[t].label:t}
+function eventTypeShort(t){return eventTypeDefs[t]?eventTypeDefs[t].short:""}
 
 let dailyRequirementOverrides={};
 let dailyEventTypes={};
@@ -351,24 +378,48 @@ days.forEach(day=>{
 
 function resolveDefaultEventType(day){
   const userOverride=dailyEventTypes[day];
-  if(userOverride)return userOverride;
-  
+  if(userOverride&&eventTypeDefs[userOverride])return userOverride;
   const dow=new Date(2026,4,day).getDay();
-  if(dow===5)return"businessVisit";
-  if(dow===0||dow===6)return"weekend";
-  return"normal";
+  let t="normal";
+  if(dow===5)t="businessVisit";
+  if(dow===0||dow===6)t="weekend";
+  return eventTypeDefs[t]?t:"normal";// 種別が削除されていた場合は通常日へフォールバック
 }
 
+// ── プリセット値を日次必要人数に反映する（修正1）
+// 優先順位: 日別手動編集(dailyRequirementOverrides) > プリセット > イベント種別テンプレート
+function applyPresetToRequirement(day,eventType,base){
+  const preset=PRESETS[currentPreset];
+  if(!preset)return base;
+  const result={...base};
+  // 優先順位は「手入力 > イベント種別定義 > プリセット」。
+  // プリセットが作用するのは (1)基本日（通常日・土日）の人数 (2)イベント日扱い種別の中番 (3)day指定の入替人数 のみ。
+  // 明示的なイベント種別（入替作業日・カスタム種別等）の数値はプリセットで潰さない。
+  const isBaseDay=eventType==="normal"||eventType==="weekend";
+  if(isBaseDay){
+    if(preset.early&&typeof preset.early.required==="number")result.early=preset.early.required;
+    if(preset.late&&typeof preset.late.required==="number")result.late=preset.late.required;
+    if(preset.middle&&typeof preset.middle.normalRequired==="number")result.middle=preset.middle.normalRequired;
+  }else if(eventTypeDefs[eventType]&&eventTypeDefs[eventType].presetEventLike
+           &&preset.middle&&typeof preset.middle.eventRequired==="number"){
+    result.middle=preset.middle.eventRequired;
+  }
+  if(preset.changeover&&typeof preset.changeover["day"+day]==="number"){
+    result.changeover=preset.changeover["day"+day];
+  }
+  return result;
+}
 function buildDefaultDailyRequirement(day){
   const eventType=resolveDefaultEventType(day);
-  const tmpl=DAILY_REQUIREMENT_TEMPLATES[eventType]||DAILY_REQUIREMENT_TEMPLATES.normal;
+  const tmpl=eventTypeDefs[eventType]||eventTypeDefs.normal;
+  const applied=applyPresetToRequirement(day,eventType,{early:tmpl.early,middle:tmpl.middle,late:tmpl.late,changeover:tmpl.changeover});
   return {
     day,
     eventType,
-    early:tmpl.early,
-    middle:tmpl.middle,
-    late:tmpl.late,
-    changeover:tmpl.changeover,
+    early:applied.early,
+    middle:applied.middle,
+    late:applied.late,
+    changeover:applied.changeover,
     note:""
   };
 }
@@ -402,7 +453,7 @@ const shiftDefs={
 };
 
 // ── 勤務テンプレート定義（新規追加）
-const shiftTemplates={
+const BUILTIN_SHIFT_TEMPLATES={
   // 早番
   early_0700:{id:"early_0700",group:"early",label:"早7:00",start:"07:00",end:"16:00",startMinutes:420,endMinutes:960,crossesMidnight:false,className:"shift-early"},
   early_0730:{id:"early_0730",group:"early",label:"早7:30",start:"07:30",end:"16:30",startMinutes:450,endMinutes:990,crossesMidnight:false,className:"shift-early"},
@@ -426,8 +477,39 @@ const shiftTemplates={
   changeover_2000:{id:"changeover_2000",group:"changeover",label:"入替20:00",start:"20:00",end:"29:00",startMinutes:1200,endMinutes:1740,crossesMidnight:true,className:"shift-changeover"}
 };
 
+let shiftTemplates=cloneData(BUILTIN_SHIFT_TEMPLATES);
+
 // ── 標準テンプレート割り当てマップ
-const defaultTemplateMap={early:"early_0800",middle:"middle_1100",late:"late_1400",changeover:"changeover_2000"};
+const BUILTIN_DEFAULT_TEMPLATE_MAP={early:"early_0800",middle:"middle_1100",late:"late_1400",changeover:"changeover_2000"};
+let defaultTemplateMap=cloneData(BUILTIN_DEFAULT_TEMPLATE_MAP);
+
+// ── テンプレートの派生値（分換算・跨ぎ判定・表示クラス）を開始/終了時刻から再計算【機能追加】
+const SHIFT_GROUP_LABELS={early:"早番",middle:"中番",late:"遅番",changeover:"入替"};
+const SHIFT_GROUP_SHORT={early:"早",middle:"中",late:"遅",changeover:"入替"};
+function parseTimeToMinutes(str){
+  const m=/^([0-2]?\d):([0-5]\d)$/.exec(String(str).trim());
+  if(!m)return null;
+  const h=Number(m[1]),mi=Number(m[2]);
+  if(h>29)return null;// 29:00（=翌5:00）までを許容
+  return h*60+mi;
+}
+function normalizeShiftTemplates(){
+  Object.values(shiftTemplates).forEach(t=>{
+    const sm=parseTimeToMinutes(t.start),em=parseTimeToMinutes(t.end);
+    t.startMinutes=sm!==null?sm:0;
+    t.endMinutes=em!==null?em:0;
+    t.crossesMidnight=t.endMinutes>=1440;
+    t.className=(shiftDefs[t.group]&&shiftDefs[t.group].className)||"shift-early";
+  });
+  // 標準テンプレートが削除/区分不一致なら同区分の先頭へ付け替え
+  ["early","middle","late","changeover"].forEach(g=>{
+    const cur=shiftTemplates[defaultTemplateMap[g]];
+    if(!cur||cur.group!==g){
+      const first=Object.values(shiftTemplates).find(t=>t.group===g);
+      defaultTemplateMap[g]=first?first.id:null;
+    }
+  });
+}
 
 let staffList=[
   {id:"1001",name:"山田 太郎",  role:"SM",auto:false,am:true, key:true, changeover:true, target:0, pref:"early"},
@@ -506,6 +588,8 @@ function buildReq(){
 }
 let requirements=buildReq();
 let shiftMatrix={},templateMatrix={},cellTags={},errors=[],unfilled=[],selectedCell=null,generated=false;
+// 生成処理中にのみ確定する通知（再検証で再計算できないもの）。validateFinal でクリアしない（修正3）
+let generationNotices=[];
 
 // ── templateMatrix 初期化
 function initTemplateMatrix(){templateMatrix={};staffList.forEach(st=>{templateMatrix[st.id]={};days.forEach(day=>{templateMatrix[st.id][day]=null})})}
@@ -514,7 +598,7 @@ function initTemplateMatrix(){templateMatrix={};staffList.forEach(st=>{templateM
 function getDefaultTemplate(shiftType){return defaultTemplateMap[shiftType]||null}
 
 // ── template から実時刻を取得してDate オブジェクトを作成
-function buildShiftDateTime(day,templateId){if(!templateId)return null;const tmpl=shiftTemplates[templateId];if(!tmpl)return null;const[sh,sm]=tmpl.start.split(":").map(Number);let[eh,em]=tmpl.end.split(":").map(Number);const start=new Date(2026,4,day,sh,sm,0);let endDay=day;if(eh>=24){eh-=24;endDay=Math.min(day+1,31)}const end=new Date(2026,4,endDay,eh,em,0);return{start,end}}
+function buildShiftDateTime(day,templateId){if(!templateId)return null;const tmpl=shiftTemplates[templateId];if(!tmpl)return null;const[sh,sm]=tmpl.start.split(":").map(Number);let[eh,em]=tmpl.end.split(":").map(Number);const start=new Date(2026,4,day,sh,sm,0);let endDay=day;if(eh>=24){eh-=24;endDay=day+1}/* Dateが自動で翌月へ繰り上げる（修正4） */const end=new Date(2026,4,endDay,eh,em,0);return{start,end}}
 
 // ── 前のシフト情報を取得
 function findPrevShiftInfo(id,day){for(let d=day-1;d>=1;d--){const s=shiftMatrix[id][d];if(["early","middle","late","changeover"].includes(s)){const tmplId=templateMatrix[id]&&templateMatrix[id][d]?templateMatrix[id][d]:getDefaultTemplate(s);return{day:d,shiftType:s,templateId:tmplId}}}}
@@ -596,7 +680,7 @@ function chooseManagerMeetingShift(st,day){
 function applyManagerMeeting(){
   days.forEach(day=>{
     const daily=getDailyRequirement(day);
-    if(daily.eventType!="managerMeeting")return;
+    if(!(eventTypeDefs[daily.eventType]&&eventTypeDefs[daily.eventType].managerAll))return;
     
     staffList.forEach(st=>{
       if((st.role==="SM"||st.role==="AM")&&shiftMatrix[st.id][day]==="blank"){
@@ -604,26 +688,26 @@ function applyManagerMeeting(){
         if(!ft){
           const shiftType=chooseManagerMeetingShift(st,day);
           if(!shiftType){
-            unfilled.push(`${day}日 役職会議：${st.name}は連勤/インターバル条件で配置できません`);
+            generationNotices.push(`${day}日 役職会議：${st.name}は連勤/インターバル条件で配置できません`);
             return;
           }
           shiftMatrix[st.id][day]=shiftType;
           templateMatrix[st.id][day]=getDefaultTemplate(shiftType);
           addTag(st.id,day,"会");
         } else if(ft==="requestOff"){
-          unfilled.push(`${day}日 役職会議：${st.name}は希望休のため配置していません`);
+          generationNotices.push(`${day}日 役職会議：${st.name}は希望休のため配置していません`);
         } else if(ft==="paid"){
-          unfilled.push(`${day}日 役職会議：${st.name}は有休のため配置していません`);
+          generationNotices.push(`${day}日 役職会議：${st.name}は有休のため配置していません`);
         } else if(ft==="unavailable"){
-          unfilled.push(`${day}日 役職会議：${st.name}は勤務不可のため配置していません`);
+          generationNotices.push(`${day}日 役職会議：${st.name}は勤務不可のため配置していません`);
         }
       }
     });
   });
 }
 
-function generateShift(){_seed=Date.now()^(Math.random()*0xffffffff)|0;initMatrix();initTemplateMatrix();applyFixed();applyManagerMeeting();days.forEach(day=>{for(const t of["early","late","middle","changeover"]){const req=requirements[day][t];if(!req||req.required<=0)continue;assignMinimumAM(day,t,req.minAM);assignMinimumCashKey(day,t,req.minKey);fillRequiredStaff(day,t,req.required);if(t==="changeover")applyChangeoverNextDayOff(day)}});days.forEach(day=>repairDailyShortage(day));fillTowardTargetHours();staffList.forEach(st=>days.forEach(day=>{if(shiftMatrix[st.id][day]==="blank")shiftMatrix[st.id][day]="off"}));markBlocks();generated=true;validateFinal();buildSheet();updateCards();renderWarnings();renderStaffSettings();renderDailyRequirements()}
-function clearGenerated(){initMatrix();initTemplateMatrix();generated=false;updateCardsBlank();buildSheet();document.getElementById("warningList").innerHTML="<li>自動生成分をクリアしました。</li>"}
+function generateShift(){_seed=Date.now()^(Math.random()*0xffffffff)|0;generationNotices=[];initMatrix();initTemplateMatrix();applyFixed();applyManagerMeeting();days.forEach(day=>{for(const t of["early","late","middle","changeover"]){const req=requirements[day][t];if(!req||req.required<=0)continue;assignMinimumAM(day,t,req.minAM);assignMinimumCashKey(day,t,req.minKey);fillRequiredStaff(day,t,req.required);if(t==="changeover")applyChangeoverNextDayOff(day)}});days.forEach(day=>repairDailyShortage(day));fillTowardTargetHours();staffList.forEach(st=>days.forEach(day=>{if(shiftMatrix[st.id][day]==="blank")shiftMatrix[st.id][day]="off"}));markBlocks();generated=true;validateFinal();buildSheet();updateCards();renderWarnings();renderStaffSettings();renderDailyRequirements();renderShiftTemplateSettings()}
+function clearGenerated(){generationNotices=[];initMatrix();initTemplateMatrix();generated=false;updateCardsBlank();buildSheet();document.getElementById("warningList").innerHTML="<li>自動生成分をクリアしました。</li>"}
 function countAssigned(day,t){return staffList.filter(st=>shiftMatrix[st.id][day]===t).length}
 function countAM(day,t){return staffList.filter(st=>st.am&&shiftMatrix[st.id][day]===t).length}
 function countKey(day,t){return staffList.filter(st=>st.key&&shiftMatrix[st.id][day]===t).length}
@@ -733,7 +817,8 @@ function updateCards(){const auto=staffList.filter(s=>s.auto);const avg=(auto.re
 function updateCardsBlank(){["avgWorkDays","avgWorkHours","blockRate","coverageRate","roleRate","errorCount"].forEach(id=>document.getElementById(id).textContent="--")}
 function renderWarnings(){let html=[];
 html.push(`<li><strong style="color:var(--accent);">現在の必要人数プリセット：${currentPreset}</strong></li>`);
-if(errors.length===0)html.push("<li>重大エラーはありません。最大4連勤・インターバル（実時刻判定）・希望休を候補除外で処理しています。</li>");else html.push(...errors.slice(0,10).map(e=>`<li><strong style="color:var(--warn)">重大：</strong>${e}</li>`));if(unfilled.length===0)html.push("<li>未充足はありません。AM・金銭キー・必要人数を満たしています。</li>");else html.push(...unfilled.slice(0,12).map(e=>`<li><strong style="color:var(--accent3)">未充足：</strong>${e}</li>`));html.push("<li>必要人数を満たした後、目標勤務時間に不足しているスタッフを、最大1割程度の余剰範囲内で追加配置します。</li>");html.push("<li>勤務は3〜4日単位の同一区分ブロックを優先し、平均160時間前後を目標に配置。インターバル判定は勤務テンプレートの実時刻で計算します。</li>");document.getElementById("warningList").innerHTML=html.join("")}
+if(errors.length===0)html.push("<li>重大エラーはありません。最大4連勤・インターバル（実時刻判定）・希望休を候補除外で処理しています。</li>");else html.push(...errors.slice(0,10).map(e=>`<li><strong style="color:var(--warn)">重大：</strong>${e}</li>`));if(unfilled.length===0)html.push("<li>未充足はありません。AM・金銭キー・必要人数を満たしています。</li>");else html.push(...unfilled.slice(0,12).map(e=>`<li><strong style="color:var(--accent3)">未充足：</strong>${e}</li>`));
+if(generationNotices.length>0)html.push(...generationNotices.slice(0,8).map(e=>`<li><strong style="color:#6d28d9">生成時通知：</strong>${e}</li>`));html.push("<li>必要人数を満たした後、目標勤務時間に不足しているスタッフを、最大1割程度の余剰範囲内で追加配置します。</li>");html.push("<li>勤務は3〜4日単位の同一区分ブロックを優先し、平均160時間前後を目標に配置。インターバル判定は勤務テンプレートの実時刻で計算します。</li>");document.getElementById("warningList").innerHTML=html.join("")}
 function isWeekStartMonday(day){return new Date(2026,4,day).getDay()===1}
 function addWeekStartClass(el,day){if(isWeekStartMonday(day))el.classList.add("week-start")}
 function buildSheet(){const tbody=document.getElementById("sheetBody");tbody.innerHTML="";buildStoreRows(tbody);buildSummaryRows(tbody);buildEventRow(tbody);buildDateHeader(tbody);buildStaffRows(tbody)}
@@ -750,10 +835,10 @@ function buildEventRow(tbody){
     
     const daily=getDailyRequirement(day);
     const eventType=daily.eventType;
-    const shortLabel=DAILY_EVENT_TYPE_SHORT[eventType]||"";
-    const fullLabel=DAILY_EVENT_TYPE_LABELS[eventType]||"";
+    const shortLabel=eventTypeShort(eventType);
+    const fullLabel=eventTypeLabel(eventType);
     
-    if(shortLabel && eventType!=="weekend"){
+    if(shortLabel){
       td.textContent=shortLabel;
       td.title=fullLabel;
     } else {
@@ -771,7 +856,7 @@ function createShiftCell(st,day,shiftType){const td=document.createElement("td")
 function applyShiftToCell(td,shiftType,id,day){Object.values(shiftDefs).forEach(def=>td.classList.remove(def.className));td.classList.remove("violation");const def=shiftDefs[shiftType]||shiftDefs.blank;td.classList.add(def.className);let tagHtml="";const tags=cellTags[id]?.[day]||[];if(tags.includes("希"))tagHtml=`<span class="tag-mini tag-request">希</span>`;else if(tags.includes("有"))tagHtml=`<span class="tag-mini tag-request">有</span>`;else if(tags.includes("不"))tagHtml=`<span class="tag-mini tag-error">不</span>`;else if(tags.includes("早×"))tagHtml=`<span class="tag-mini" style="background:#dc2626;color:#fff;font-size:9px;">早×</span>`;else if(tags.includes("遅×"))tagHtml=`<span class="tag-mini" style="background:#dc2626;color:#fff;font-size:9px;">遅×</span>`;else if(tags.includes("翌休"))tagHtml=`<span class="tag-mini tag-auto-rest">翌休</span>`;else if(tags.includes("役"))tagHtml=`<span class="tag-mini tag-role">役</span>`;else if(tags.includes("ブロック"))tagHtml=`<span class="tag-mini tag-block">ブロック</span>`;else if(tags.includes("手"))tagHtml=`<span class="tag-mini tag-manual">手</span>`;else if(tags.includes("自"))tagHtml=`<span class="tag-mini tag-block">自</span>`;if(["off","requestOff","paid","unavailable","excluded"].includes(shiftType)){td.innerHTML=`<span class="circle-mark">${def.label}</span>${tagHtml}`}else if(shiftType==="blank"){td.innerHTML=tagHtml}else{const tmplId=templateMatrix[id]&&templateMatrix[id][day]?templateMatrix[id][day]:getDefaultTemplate(shiftType);const tmpl=shiftTemplates[tmplId];if(tmpl){td.innerHTML=`<div class="time-two-lines"><div>${tmpl.start}</div><div>${tmpl.end}</div></div>${tagHtml}`}else{td.innerHTML=`<div class="time-two-lines"><div>--</div><div>--</div></div>${tagHtml}`}}}
 
 function selectCell(td,event){selectedCell=td;showQuickMenu(td,event)}
-function showQuickMenu(td,event){const menu=document.getElementById("quickMenu");document.getElementById("quickTitle").textContent=`${td.dataset.staffName}｜${td.dataset.dateLabel}`;menu.style.display="block";let left=event.clientX+10,top=event.clientY+10;if(left+230>innerWidth)left=innerWidth-242;if(top+270>innerHeight)top=innerHeight-282;menu.style.left=left+"px";menu.style.top=top+"px"}
+function showQuickMenu(td,event){const menu=document.getElementById("quickMenu");document.getElementById("quickTitle").textContent=`${td.dataset.staffName}｜${td.dataset.dateLabel}`;renderQuickTemplates(td);menu.style.display="block";let left=event.clientX+10,top=event.clientY+10;if(left+230>innerWidth)left=innerWidth-242;if(top+270>innerHeight)top=innerHeight-282;menu.style.left=left+"px";menu.style.top=top+"px"}
 function hideQuickMenu(){document.getElementById("quickMenu").style.display="none";selectedCell=null}
 function changeSelectedShift(shiftType){if(!selectedCell)return;const id=selectedCell.dataset.staffId;const day=Number(selectedCell.dataset.day);shiftMatrix[id][day]=shiftType;const defaultTmplId=getDefaultTemplate(shiftType);if(defaultTmplId){templateMatrix[id][day]=defaultTmplId}cellTags[id][day]=["手"];validateFinal();buildSheet();updateCards();renderWarnings();hideQuickMenu()}
 
@@ -782,6 +867,14 @@ function changePreset(presetName){
   document.getElementById("currentPresetDisplay").dataset.preset=presetName;
   requirements=buildReq();
   renderDailyRequirements();
+  if(generated){
+    // 生成済みシフトは旧プリセット基準のため、再検証して差分を可視化し、再生成を促す（修正1）
+    validateFinal();buildSheet();updateCards();renderWarnings();
+    const list=document.getElementById("warningList");
+    list.innerHTML='<li><strong style="color:var(--warn)">プリセットを変更しました。現在の表は旧設定で生成されたものです。「自動生成」を再実行してください。</strong></li>'+list.innerHTML;
+  } else {
+    buildSheet();
+  }
 }
 
 function downloadCsv(){const header=["社員番号","氏名","区分",...days.map(d=>`5/${d}`),...days.map(d=>`5/${d}(時刻)`)];const lines=[header.join(",")];staffList.forEach(st=>{const shiftCells=days.map(day=>{const tmplId=templateMatrix[st.id]&&templateMatrix[st.id][day]?templateMatrix[st.id][day]:getDefaultTemplate(shiftMatrix[st.id][day]);const tmpl=shiftTemplates[tmplId];if(tmpl){return`${shiftDefs[shiftMatrix[st.id][day]]?.label||""}`}else{return shiftDefs[shiftMatrix[st.id][day]]?.label||""}});const timeCells=days.map(day=>{const tmplId=templateMatrix[st.id]&&templateMatrix[st.id][day]?templateMatrix[st.id][day]:getDefaultTemplate(shiftMatrix[st.id][day]);const tmpl=shiftTemplates[tmplId];if(tmpl){return`${tmpl.start}-${tmpl.end}`}else{return""}});lines.push([st.id,st.name,st.role,...shiftCells,...timeCells].join(","))});const blob=new Blob(["\uFEFF"+lines.join("\n")],{type:"text/csv;charset=utf-8;"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="shift_auto_generate_demo_templates.csv";a.click();URL.revokeObjectURL(url)}
@@ -1010,10 +1103,10 @@ function renderDailyRequirements(){
 
     const eventTypeTd=document.createElement("td");
     const eventTypeSelect=document.createElement("select");
-    Object.keys(DAILY_EVENT_TYPE_LABELS).forEach(key=>{
+    Object.keys(eventTypeDefs).forEach(key=>{
       const opt=document.createElement("option");
       opt.value=key;
-      opt.textContent=DAILY_EVENT_TYPE_LABELS[key];
+      opt.textContent=eventTypeDefs[key].label;
       eventTypeSelect.appendChild(opt);
     });
     eventTypeSelect.value=daily.eventType;
@@ -1100,7 +1193,21 @@ function updateStaffSetting(staffId,field,value){
   if(!st)return;
   
   // フィールドごとの更新
-  if(field==="id")st.id=value;
+  if(field==="id"){
+    // 社員コード変更（修正2）: 各データのキーを旧ID→新IDへ付け替え、空・重複は拒否
+    const newId=String(value).trim();
+    if(!newId){alert("社員コードは空にできません。元の値に戻します。");renderStaffSettings();return;}
+    if(newId!==st.id&&staffList.some(s=>s!==st&&s.id===newId)){alert("社員コード「"+newId+"」は既に使用されています。元の値に戻します。");renderStaffSettings();return;}
+    if(newId!==st.id){
+      const oldId=st.id;
+      [shiftMatrix,templateMatrix,cellTags,requestMap].forEach(map=>{
+        if(map[oldId]!==undefined){map[newId]=map[oldId];delete map[oldId];}
+      });
+      st.id=newId;
+      buildSheet();// セルの dataset.staffId を新IDで再構築
+      renderStaffSettings();
+    }
+  }
   else if(field==="name")st.name=value;
   else if(field==="role"){
     st.role=value;
@@ -1121,12 +1228,334 @@ function updateStaffSetting(staffId,field,value){
   else if(field==="note")st.note=value;
 }
 
+// ════════════════════════════════════════════════════════════
+// イベント種別・勤務テンプレートの編集機能【機能追加】
+// ════════════════════════════════════════════════════════════
+const SETTINGS_STORAGE_KEY="shiftDemoToolSettings_v1";
 
+function saveLocalSettings(){
+  try{
+    localStorage.setItem(SETTINGS_STORAGE_KEY,JSON.stringify({
+      schemaVersion:1,eventTypeDefs,shiftTemplates,defaultTemplateMap
+    }));
+  }catch(e){/* localStorage不可環境では保存をスキップ */}
+}
+function loadLocalSettings(){
+  try{
+    const raw=localStorage.getItem(SETTINGS_STORAGE_KEY);
+    if(!raw)return;
+    const d=JSON.parse(raw);
+    if(d.schemaVersion!==1)return;
+    if(d.eventTypeDefs&&typeof d.eventTypeDefs==="object")eventTypeDefs=d.eventTypeDefs;
+    if(d.shiftTemplates&&typeof d.shiftTemplates==="object")shiftTemplates=d.shiftTemplates;
+    if(d.defaultTemplateMap&&typeof d.defaultTemplateMap==="object")defaultTemplateMap=d.defaultTemplateMap;
+    ensureSettingsIntegrity();
+  }catch(e){/* 壊れた保存データは無視して初期値で起動 */}
+}
+function ensureSettingsIntegrity(){
+  // 基盤種別は必ず存在させ、systemフラグを再強制（保存データ改変への防御）
+  ["normal","weekend"].forEach(k=>{
+    if(!eventTypeDefs[k])eventTypeDefs[k]=cloneData(BUILTIN_EVENT_TYPE_DEFS[k]);
+    eventTypeDefs[k].system=true;
+  });
+  Object.keys(eventTypeDefs).forEach(k=>{eventTypeDefs[k].id=k});
+  // 各区分にテンプレートが1つもなければ組込み標準を復元
+  ["early","middle","late","changeover"].forEach(g=>{
+    if(!Object.values(shiftTemplates).some(t=>t.group===g)){
+      const bid=BUILTIN_DEFAULT_TEMPLATE_MAP[g];
+      shiftTemplates[bid]=cloneData(BUILTIN_SHIFT_TEMPLATES[bid]);
+    }
+  });
+  Object.keys(shiftTemplates).forEach(k=>{shiftTemplates[k].id=k});
+  normalizeShiftTemplates();
+}
+function resetLocalSettings(){
+  if(!confirm("イベント種別と勤務テンプレートの設定を初期値に戻します。\n（スタッフ設定・日別必要人数・生成済みシフトは保持されます）\nよろしいですか？"))return;
+  try{localStorage.removeItem(SETTINGS_STORAGE_KEY)}catch(e){}
+  eventTypeDefs=cloneData(BUILTIN_EVENT_TYPE_DEFS);
+  shiftTemplates=cloneData(BUILTIN_SHIFT_TEMPLATES);
+  defaultTemplateMap=cloneData(BUILTIN_DEFAULT_TEMPLATE_MAP);
+  normalizeShiftTemplates();
+  afterEventTypeSettingsChanged("設定の初期化");
+  renderShiftTemplateSettings();
+}
+function noticeRegenerate(what){
+  const list=document.getElementById("warningList");
+  if(list)list.innerHTML='<li><strong style="color:var(--warn)">'+what+'を変更しました。現在の表は旧設定で生成されたものです。「自動生成」を再実行してください。</strong></li>'+list.innerHTML;
+}
+function afterEventTypeSettingsChanged(what){
+  requirements=buildReq();
+  saveLocalSettings();
+  renderEventTypeSettings();
+  renderDailyRequirements();
+  buildSheet();
+  if(generated){validateFinal();updateCards();renderWarnings();noticeRegenerate(what||"イベント種別設定")}
+}
+function afterTemplateSettingsChanged(what){
+  normalizeShiftTemplates();
+  saveLocalSettings();
+  renderShiftTemplateSettings();
+  buildSheet();
+  if(generated){validateFinal();updateCards();renderWarnings();noticeRegenerate(what||"勤務テンプレート設定")}
+}
+
+// ── イベント種別：追加・更新・削除
+function addEventType(){
+  let n=1;while(eventTypeDefs["custom_"+n])n++;
+  const id="custom_"+n;
+  eventTypeDefs[id]={id,label:"新しい種別"+n,short:"新"+n,early:3,middle:0,late:3,changeover:0,system:false,managerAll:false,presetEventLike:false};
+  afterEventTypeSettingsChanged("イベント種別の追加");
+}
+function updateEventTypeDef(id,field,value){
+  const def=eventTypeDefs[id];if(!def)return;
+  if(["early","middle","late","changeover"].includes(field)){
+    def[field]=Math.max(0,Math.floor(Number(value)||0));
+  }else if(field==="label"){
+    const v=String(value).trim();
+    if(!v){alert("名称は空にできません。");renderEventTypeSettings();return}
+    def.label=v;
+  }else if(field==="short"){
+    def.short=String(value).trim().slice(0,3);
+  }else if(field==="managerAll"||field==="presetEventLike"){
+    def[field]=!!value;
+  }
+  afterEventTypeSettingsChanged();
+}
+function deleteEventType(id){
+  const def=eventTypeDefs[id];if(!def)return;
+  if(def.system){alert("「"+def.label+"」は曜日自動判定の基盤のため削除できません。");return}
+  const refDays=days.filter(d=>dailyEventTypes[d]===id||(dailyRequirementOverrides[d]&&dailyRequirementOverrides[d].eventType===id));
+  let msg="イベント種別「"+def.label+"」を削除します。";
+  if(refDays.length)msg+="\nこの種別が設定されている "+refDays.length+" 日は「通常日」に戻ります。";
+  if(!confirm(msg+"\nよろしいですか？"))return;
+  refDays.forEach(d=>{
+    if(dailyEventTypes[d]===id)delete dailyEventTypes[d];
+    const ov=dailyRequirementOverrides[d];
+    if(ov&&ov.eventType===id){
+      delete ov.eventType;
+      if(ov.editedFields)delete ov.editedFields.eventType;
+    }
+  });
+  delete eventTypeDefs[id];
+  afterEventTypeSettingsChanged("イベント種別の削除");
+}
+
+function renderEventTypeSettings(){
+  const table=document.getElementById("eventTypeSettingsTable");
+  if(!table)return;
+  table.innerHTML="";
+  const thead=document.createElement("thead");
+  const hr=document.createElement("tr");
+  ["種別ID","名称","略称(3文字)","早番","中番","遅番","入替","役職全員出勤","イベント日扱い","操作"].forEach(h=>{
+    const th=document.createElement("th");th.textContent=h;hr.appendChild(th);
+  });
+  thead.appendChild(hr);table.appendChild(thead);
+  const tbody=document.createElement("tbody");
+  Object.values(eventTypeDefs).forEach(def=>{
+    const tr=document.createElement("tr");
+    const idTd=document.createElement("td");
+    idTd.className="settings-id-col";idTd.textContent=def.id;tr.appendChild(idTd);
+    const labelTd=document.createElement("td");
+    const labelInput=document.createElement("input");
+    labelInput.type="text";labelInput.value=def.label;
+    labelInput.onchange=()=>updateEventTypeDef(def.id,"label",labelInput.value);
+    labelTd.appendChild(labelInput);tr.appendChild(labelTd);
+    const shortTd=document.createElement("td");
+    const shortInput=document.createElement("input");
+    shortInput.type="text";shortInput.value=def.short;shortInput.maxLength=3;shortInput.style.width="60px";
+    shortInput.onchange=()=>updateEventTypeDef(def.id,"short",shortInput.value);
+    shortTd.appendChild(shortInput);tr.appendChild(shortTd);
+    ["early","middle","late","changeover"].forEach(f=>{
+      const td=document.createElement("td");
+      const input=document.createElement("input");
+      input.type="number";input.min="0";input.value=def[f];input.style.width="56px";
+      input.onchange=()=>updateEventTypeDef(def.id,f,input.value);
+      td.appendChild(input);tr.appendChild(td);
+    });
+    const mgrTd=document.createElement("td");
+    const mgrChk=document.createElement("input");
+    mgrChk.type="checkbox";mgrChk.checked=!!def.managerAll;
+    mgrChk.onchange=()=>updateEventTypeDef(def.id,"managerAll",mgrChk.checked);
+    mgrTd.appendChild(mgrChk);tr.appendChild(mgrTd);
+    const evTd=document.createElement("td");
+    const evChk=document.createElement("input");
+    evChk.type="checkbox";evChk.checked=!!def.presetEventLike;
+    evChk.onchange=()=>updateEventTypeDef(def.id,"presetEventLike",evChk.checked);
+    evTd.appendChild(evChk);tr.appendChild(evTd);
+    const opTd=document.createElement("td");
+    if(def.system){
+      opTd.textContent="基本（削除不可）";
+      opTd.className="settings-id-col";
+    }else{
+      const delBtn=document.createElement("button");
+      delBtn.className="danger";delBtn.textContent="削除";
+      delBtn.onclick=()=>deleteEventType(def.id);
+      opTd.appendChild(delBtn);
+    }
+    tr.appendChild(opTd);
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+}
+
+// ── 勤務テンプレート：追加・更新・削除・標準指定
+function templateUsageCount(tmplId){
+  let c=0;
+  staffList.forEach(st=>days.forEach(day=>{
+    if(shiftMatrix[st.id]&&isWork(shiftMatrix[st.id][day])&&templateMatrix[st.id]&&templateMatrix[st.id][day]===tmplId)c++;
+  }));
+  return c;
+}
+function buildTemplateLabel(group,start){return SHIFT_GROUP_SHORT[group]+start}
+function addShiftTemplate(){
+  const group=document.getElementById("newTemplateGroup").value;
+  const start=document.getElementById("newTemplateStart").value.trim();
+  const end=document.getElementById("newTemplateEnd").value.trim();
+  const sm=parseTimeToMinutes(start),em=parseTimeToMinutes(end);
+  if(sm===null||em===null){alert("時刻は HH:MM 形式で入力してください（終了は 29:00 まで、例 25:00 = 翌1:00）。");return}
+  if(em<=sm){alert("終了時刻は開始時刻より後にしてください。日を跨ぐ場合は 25:00 のように24時を超える表記を使います。");return}
+  if(em-sm>14*60){alert("1勤務が14時間を超えています。時刻を確認してください。");return}
+  let id=group+"_"+start.replace(":","");
+  let n=2;while(shiftTemplates[id]){id=group+"_"+start.replace(":","")+"_"+n;n++}
+  shiftTemplates[id]={id,group,label:buildTemplateLabel(group,start),start,end,startMinutes:sm,endMinutes:em,crossesMidnight:em>=1440,className:(shiftDefs[group]&&shiftDefs[group].className)||"shift-early"};
+  document.getElementById("newTemplateStart").value="";
+  document.getElementById("newTemplateEnd").value="";
+  afterTemplateSettingsChanged("勤務テンプレートの追加");
+}
+function updateShiftTemplate(id,field,value){
+  const t=shiftTemplates[id];if(!t)return;
+  if(field==="label"){
+    const v=String(value).trim();
+    if(!v){alert("名称は空にできません。");renderShiftTemplateSettings();return}
+    t.label=v;
+  }else if(field==="start"||field==="end"){
+    const next={start:t.start,end:t.end};next[field]=String(value).trim();
+    const sm=parseTimeToMinutes(next.start),em=parseTimeToMinutes(next.end);
+    if(sm===null||em===null){alert("時刻は HH:MM 形式で入力してください（終了は 29:00 まで）。");renderShiftTemplateSettings();return}
+    if(em<=sm){alert("終了時刻は開始時刻より後にしてください。日を跨ぐ場合は 25:00 のように表記します。");renderShiftTemplateSettings();return}
+    if(em-sm>14*60){alert("1勤務が14時間を超えています。時刻を確認してください。");renderShiftTemplateSettings();return}
+    t.start=next.start;t.end=next.end;
+  }
+  afterTemplateSettingsChanged();
+}
+function setDefaultTemplate(group,id){
+  if(!shiftTemplates[id]||shiftTemplates[id].group!==group)return;
+  defaultTemplateMap[group]=id;
+  saveLocalSettings();
+  renderShiftTemplateSettings();
+}
+function deleteShiftTemplate(id){
+  const t=shiftTemplates[id];if(!t)return;
+  const sameGroup=Object.values(shiftTemplates).filter(x=>x.group===t.group);
+  if(sameGroup.length<=1){alert(SHIFT_GROUP_LABELS[t.group]+"のテンプレートはこれが最後のため削除できません。各区分に最低1つ必要です。");return}
+  const usage=templateUsageCount(id);
+  let msg="勤務テンプレート「"+t.label+"（"+t.start+"-"+t.end+"）」を削除します。";
+  if(usage>0)msg+="\n現在 "+usage+" セルで使用中です。該当セルは同区分の標準テンプレートに付け替えます。";
+  if(!confirm(msg+"\nよろしいですか？"))return;
+  delete shiftTemplates[id];
+  if(defaultTemplateMap[t.group]===id){
+    defaultTemplateMap[t.group]=Object.values(shiftTemplates).find(x=>x.group===t.group).id;
+  }
+  const fallback=defaultTemplateMap[t.group];
+  staffList.forEach(st=>days.forEach(day=>{
+    if(templateMatrix[st.id]&&templateMatrix[st.id][day]===id)templateMatrix[st.id][day]=fallback;
+  }));
+  afterTemplateSettingsChanged("勤務テンプレートの削除");
+}
+
+function renderShiftTemplateSettings(){
+  const table=document.getElementById("shiftTemplateSettingsTable");
+  if(!table)return;
+  table.innerHTML="";
+  const thead=document.createElement("thead");
+  const hr=document.createElement("tr");
+  ["区分","名称","開始","終了","標準","使用セル数","操作"].forEach(h=>{
+    const th=document.createElement("th");th.textContent=h;hr.appendChild(th);
+  });
+  thead.appendChild(hr);table.appendChild(thead);
+  const tbody=document.createElement("tbody");
+  ["early","middle","late","changeover"].forEach(group=>{
+    Object.values(shiftTemplates).filter(t=>t.group===group)
+      .sort((a,b)=>a.startMinutes-b.startMinutes)
+      .forEach(t=>{
+        const tr=document.createElement("tr");
+        const gTd=document.createElement("td");
+        gTd.textContent=SHIFT_GROUP_LABELS[group];tr.appendChild(gTd);
+        const labelTd=document.createElement("td");
+        const labelInput=document.createElement("input");
+        labelInput.type="text";labelInput.value=t.label;
+        labelInput.onchange=()=>updateShiftTemplate(t.id,"label",labelInput.value);
+        labelTd.appendChild(labelInput);tr.appendChild(labelTd);
+        ["start","end"].forEach(f=>{
+          const td=document.createElement("td");
+          const input=document.createElement("input");
+          input.type="text";input.value=t[f];input.style.width="70px";
+          input.onchange=()=>updateShiftTemplate(t.id,f,input.value);
+          td.appendChild(input);tr.appendChild(td);
+        });
+        const defTd=document.createElement("td");
+        const radio=document.createElement("input");
+        radio.type="radio";radio.name="defaultTmpl_"+group;
+        radio.checked=defaultTemplateMap[group]===t.id;
+        radio.onchange=()=>setDefaultTemplate(group,t.id);
+        defTd.appendChild(radio);tr.appendChild(defTd);
+        const useTd=document.createElement("td");
+        useTd.textContent=generated?String(templateUsageCount(t.id)):"--";
+        tr.appendChild(useTd);
+        const opTd=document.createElement("td");
+        const delBtn=document.createElement("button");
+        delBtn.className="danger";delBtn.textContent="削除";
+        delBtn.onclick=()=>deleteShiftTemplate(t.id);
+        opTd.appendChild(delBtn);tr.appendChild(opTd);
+        tbody.appendChild(tr);
+      });
+  });
+  table.appendChild(tbody);
+}
+
+// ── クイックメニュー：セル単位のテンプレート切替
+function renderQuickTemplates(td){
+  const box=document.getElementById("quickTemplates");
+  if(!box)return;
+  box.innerHTML="";
+  const id=td.dataset.staffId,day=Number(td.dataset.day);
+  const s=shiftMatrix[id]?shiftMatrix[id][day]:null;
+  if(!isWork(s))return;
+  const currentTmpl=(templateMatrix[id]&&templateMatrix[id][day])||getDefaultTemplate(s);
+  const sub=document.createElement("div");
+  sub.className="quick-menu-subtitle";sub.textContent="勤務テンプレート（"+SHIFT_GROUP_LABELS[s]+"）";
+  box.appendChild(sub);
+  Object.values(shiftTemplates).filter(t=>t.group===s)
+    .sort((a,b)=>a.startMinutes-b.startMinutes)
+    .forEach(t=>{
+      const btn=document.createElement("button");
+      btn.textContent=t.label+"（"+t.start+"-"+t.end+"）";
+      if(t.id===currentTmpl)btn.classList.add("active");
+      btn.onclick=e=>{e.stopPropagation();changeSelectedTemplate(t.id)};
+      box.appendChild(btn);
+    });
+}
+function changeSelectedTemplate(tmplId){
+  if(!selectedCell)return;
+  const id=selectedCell.dataset.staffId;
+  const day=Number(selectedCell.dataset.day);
+  if(!isWork(shiftMatrix[id][day]))return;
+  templateMatrix[id][day]=tmplId;
+  addTag(id,day,"手");
+  validateFinal();buildSheet();updateCards();renderWarnings();hideQuickMenu();
+}
+
+
+loadLocalSettings();// 保存済みのイベント種別・勤務テンプレート設定を復元【機能追加】
+normalizeShiftTemplates();
+requirements=buildReq();// 復元した設定で必要人数を再計算
 document.getElementById("presetSelect").value=currentPreset;
 document.getElementById("currentPresetDisplay").textContent="現在："+currentPreset;
 initMatrix();initTemplateMatrix();applyFixed();buildSheet();updateCardsBlank();
 renderStaffSettings();
 renderDailyRequirements();
+renderEventTypeSettings();
+renderShiftTemplateSettings();
 
 // ── JSON読込・保存機能 ──
 
@@ -1164,7 +1593,10 @@ function saveStoreMasterJson(){
     staffList:staffList,
     dailyEventTypes:dailyEventTypes,
     dailyRequirementOverrides:dailyRequirementOverrides,
-    currentPreset:currentPreset
+    currentPreset:currentPreset,
+    eventTypeDefs:eventTypeDefs,
+    shiftTemplates:shiftTemplates,
+    defaultTemplateMap:defaultTemplateMap
   };
   const filename=`store_master_local_${now.filename}.json`;
   downloadJsonFile(data,filename);
@@ -1204,6 +1636,13 @@ function loadStoreMasterJsonFromFile(file){
       if(typeof json.currentPreset==="string"){
         currentPreset=json.currentPreset;
       }
+      
+      // イベント種別・勤務テンプレート設定の反映【機能追加】
+      if(json.eventTypeDefs&&typeof json.eventTypeDefs==="object")eventTypeDefs=json.eventTypeDefs;
+      if(json.shiftTemplates&&typeof json.shiftTemplates==="object")shiftTemplates=json.shiftTemplates;
+      if(json.defaultTemplateMap&&typeof json.defaultTemplateMap==="object")defaultTemplateMap=json.defaultTemplateMap;
+      ensureSettingsIntegrity();
+      saveLocalSettings();
       
       // 再描画処理
       refreshAfterJsonLoad();
@@ -1258,6 +1697,8 @@ function refreshAfterJsonLoad(){
   // 各テーブルの再描画
   renderStaffSettings();
   renderDailyRequirements();
+  renderEventTypeSettings();
+  renderShiftTemplateSettings();
 }
 
 function handleStoreMasterFile(file){
