@@ -518,7 +518,8 @@
       <div class="summary" id="summary"></div>
 
       <div class="actions">
-        <button type="button" class="action-btn primary" id="confirmBtn">提出イメージを確認する</button>
+        <button type="button" class="action-btn primary" id="copyCodeBtn">提出コードをコピー（社内SNSで店長へ送信）</button>
+        <button type="button" class="action-btn" id="confirmBtn" style="background:var(--panel2);color:var(--text);border:1px solid var(--line);margin-top:8px;">提出イメージを確認する</button>
         <button type="button" class="reset-link" id="clearBtn">入力をリセット</button>
       </div>
 
@@ -772,6 +773,73 @@
       hideConfirm();
     });
 
+    // ── 提出コード（[SHIFT]…[/SHIFT]）の生成とコピー【機能追加】
+    function buildSubmissionCode() {
+      const data = getMonthData();
+      const wish = { early: [], late: [], off: [], paid: [] };
+      Object.keys(data).sort().forEach(key => {
+        const day = Number(key.slice(-2));
+        const mode = data[key];
+        if (wish[mode]) wish[mode].push(day);
+      });
+      const payload = {
+        v: 1,
+        code: document.getElementById("employeeCode").value.trim(),
+        name: document.getElementById("employeeName").value.trim(),
+        month: monthKey(),
+        wish
+      };
+      return "[SHIFT]" + JSON.stringify(payload) + "[/SHIFT]";
+    }
+
+    function fallbackCopy(text) {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      let ok = false;
+      try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+      document.body.removeChild(ta);
+      return ok;
+    }
+
+    function showCodeBox(code, copied) {
+      const head = copied
+        ? "✅ 提出コードをコピーしました"
+        : "コピーできませんでした。下のコードを長押しで全選択してコピーしてください";
+      confirmBox.innerHTML = `
+        <h3>${head}</h3>
+        <div>社内SNS（ワオトーク）で<strong>店長への個別トーク</strong>に貼り付けて送ってください。</div>
+        <div style="margin-top:8px;padding:10px;background:#0b0e1a;border:1px solid var(--line);border-radius:10px;font-family:monospace;font-size:11px;word-break:break-all;user-select:all;">${escapeHtml(code)}</div>
+        <div class="submit-note">
+          ⚠ 希望休・有休は個人情報です。<strong>全員が見えるグループには送らないでください。</strong><br>
+          コードは [SHIFT] から [/SHIFT] まで全部が必要です。途中で切れると取込できません。
+        </div>
+      `;
+      confirmBox.style.display = "block";
+      confirmBox.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    function copySubmissionCode() {
+      const code = document.getElementById("employeeCode").value.trim();
+      const name = document.getElementById("employeeName").value.trim();
+      if (!code || !name) {
+        alert("社員コードと氏名を入力してください。");
+        return;
+      }
+      const text = buildSubmissionCode();
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text)
+          .then(() => showCodeBox(text, true))
+          .catch(() => showCodeBox(text, fallbackCopy(text)));
+      } else {
+        showCodeBox(text, fallbackCopy(text));
+      }
+    }
+
+    document.getElementById("copyCodeBtn").addEventListener("click", copySubmissionCode);
     document.getElementById("confirmBtn").addEventListener("click", showConfirm);
 
     document.getElementById("clearBtn").addEventListener("click", () => {

@@ -154,10 +154,15 @@ table.shift-sheet{border-collapse:collapse;width:max-content;min-width:100%;font
       <h1>仮シフト<span>自動生成</span>管理画面</h1>
       <p>最大4連勤・目標160時間・AM/金銭キー先行配置・実時刻インターバル判定・勤務テンプレート対応</p>
     </div>
-    <div class="header-meta">2026年5月<br>サンプル店舗<br>デモ社員15名</div>
+    <div class="header-meta"><span id="headerMonthLabel">2026年5月</span><br>サンプル店舗<br>デモ社員15名</div>
   </div>
 
   <div class="toolbar">
+    <div style="display:flex;gap:8px;align-items:center;">
+      <label style="font-weight:700;font-size:13px;color:var(--text-muted);">対象月</label>
+      <input type="month" id="planMonthInput" value="2026-05" onchange="changePlanMonth(this.value)" style="padding:7px 10px;border:1px solid var(--border2);border-radius:7px;background:var(--surface2);color:var(--text-muted);font-weight:700;font-size:13px;font-family:inherit;cursor:pointer;">
+    </div>
+    <div style="border-left:1px solid var(--border);height:24px;margin:0 2px;"></div>
     <div style="display:flex;gap:8px;align-items:center;">
       <label style="font-weight:700;font-size:13px;color:var(--text-muted);">必要人数プリセット</label>
       <select id="presetSelect" onchange="changePreset(this.value)" style="padding:8px 10px;border:1px solid var(--border2);border-radius:7px;background:var(--surface2);color:var(--text-muted);font-weight:700;font-size:13px;font-family:'Yu Gothic','Meiryo',system-ui,sans-serif;cursor:pointer;">
@@ -214,6 +219,22 @@ table.shift-sheet{border-collapse:collapse;width:max-content;min-width:100%;font
   <div class="note"><strong>【ローカルJSON検証用】</strong> 実データJSONを読み込んだ場合、画面上に実スタッフ情報が表示されます。スクリーンショット・GitHub公開・外部共有に注意してください。 | <strong>変更点：</strong>勤務テンプレートシステムを導入。各勤務区分に複数の開始時刻パターンに対応。インターバル判定は勤務区分名ではなく、実際の開始・終了時刻で計算。標準テンプレート（早8:00, 中11:00, 遅14:00, 入替20:00）を自動割当。必要人数を満たした後、目標勤務時間に不足しているスタッフを最大1割程度の余剰範囲内で追加配置します。</div>
 
   <details class="daily-requirement-section" open>
+    <summary>▼ 希望提出の取込・提出状況（提出コード／紙）</summary>
+    <div class="daily-requirement-content">
+      <div class="daily-requirement-note">従業員がスマホ入力ページの「<strong>提出コードをコピー</strong>」で作ったコードを、ワオトークからコピーして下の欄に貼り付け→「取込」。<strong>複数人分まとめて貼っても自動で振り分けます。</strong>紙で提出された方は、下の提出状況表の「手入力」から入力してください。<br><strong>取込時の変換：</strong>早番希望の日＝その日は遅番に入れない（遅×）、遅番希望の日＝早番に入れない（早×）として登録します。<br><strong>運用注意：</strong>希望休・有休は個人情報です。提出は店長への個別トークで受け、全員が見えるグループには流さないでください。</div>
+      <textarea id="submissionCodeInput" rows="5" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--border2);border-radius:8px;font-family:Consolas,'Courier New',monospace;font-size:12px;resize:vertical;" placeholder="[SHIFT]…[/SHIFT] のコードをここに貼り付け（複数人分まとめてOK）"></textarea>
+      <div style="margin-top:8px;">
+        <button class="primary" onclick="importSubmissionCodes()">↓ 提出コードを取込</button>
+      </div>
+      <div id="importResultBox" style="margin-top:8px;font-size:12px;line-height:1.8;"></div>
+      <div class="daily-requirement-table-wrap" style="margin-top:10px;">
+        <table id="submissionStatusTable" class="daily-requirement-table"></table>
+      </div>
+      <div id="manualEntryPanel" style="display:none;margin-top:10px;background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:12px;"></div>
+    </div>
+  </details>
+
+  <details class="daily-requirement-section">
     <summary>▼ 日別必要人数設定</summary>
     <div class="daily-requirement-content">
       <div class="daily-requirement-note"><strong>必要人数の決定順序：</strong>手入力値 → イベント種別テンプレート → 毎週金曜の事業所訪問 → 土日自動判定 → 基本プリセット。<br><strong>役職会議日：</strong>managerMeeting を設定した日は、SM・AMを全員出勤扱いに試みます。ただし、希望休・有休・勤務不可・インターバル違反・最大連勤超過がある場合は配置せず、警告として表示します。</div>
@@ -301,7 +322,14 @@ table.shift-sheet{border-collapse:collapse;width:max-content;min-width:100%;font
 </div>
 
 <script>
-const days=Array.from({length:31},(_,i)=>i+1);
+// ── 対象月の状態（月切替対応・設計書§1-5）【機能追加】
+let PLAN_YEAR=2026,PLAN_MONTH=4;// PLAN_MONTHは0始まり（4=5月）
+function daysInPlanMonth(){return new Date(PLAN_YEAR,PLAN_MONTH+1,0).getDate()}
+function buildDays(){return Array.from({length:daysInPlanMonth()},(_,i)=>i+1)}
+function planMonthLabel(){return PLAN_YEAR+"年"+(PLAN_MONTH+1)+"月"}
+function planMonthKey(){return PLAN_YEAR+"-"+String(PLAN_MONTH+1).padStart(2,"0")}
+function monthDayLabel(day){return (PLAN_MONTH+1)+"/"+day}
+let days=buildDays();
 const MAX_CONSEC=4,TARGET_WORK=20,TARGET_MIN=18,TARGET_MAX=21,MIN_INTERVAL_HOURS=11;
 const TARGET_HOURS = 160;
 const TARGET_HOURS_MIN = 152;
@@ -379,7 +407,7 @@ days.forEach(day=>{
 function resolveDefaultEventType(day){
   const userOverride=dailyEventTypes[day];
   if(userOverride&&eventTypeDefs[userOverride])return userOverride;
-  const dow=new Date(2026,4,day).getDay();
+  const dow=new Date(PLAN_YEAR,PLAN_MONTH,day).getDay();
   let t="normal";
   if(dow===5)t="businessVisit";
   if(dow===0||dow===6)t="weekend";
@@ -598,13 +626,13 @@ function initTemplateMatrix(){templateMatrix={};staffList.forEach(st=>{templateM
 function getDefaultTemplate(shiftType){return defaultTemplateMap[shiftType]||null}
 
 // ── template から実時刻を取得してDate オブジェクトを作成
-function buildShiftDateTime(day,templateId){if(!templateId)return null;const tmpl=shiftTemplates[templateId];if(!tmpl)return null;const[sh,sm]=tmpl.start.split(":").map(Number);let[eh,em]=tmpl.end.split(":").map(Number);const start=new Date(2026,4,day,sh,sm,0);let endDay=day;if(eh>=24){eh-=24;endDay=day+1}/* Dateが自動で翌月へ繰り上げる（修正4） */const end=new Date(2026,4,endDay,eh,em,0);return{start,end}}
+function buildShiftDateTime(day,templateId){if(!templateId)return null;const tmpl=shiftTemplates[templateId];if(!tmpl)return null;const[sh,sm]=tmpl.start.split(":").map(Number);let[eh,em]=tmpl.end.split(":").map(Number);const start=new Date(PLAN_YEAR,PLAN_MONTH,day,sh,sm,0);let endDay=day;if(eh>=24){eh-=24;endDay=day+1}/* Dateが自動で翌月へ繰り上げる（修正4） */const end=new Date(PLAN_YEAR,PLAN_MONTH,endDay,eh,em,0);return{start,end}}
 
 // ── 前のシフト情報を取得
 function findPrevShiftInfo(id,day){for(let d=day-1;d>=1;d--){const s=shiftMatrix[id][d];if(["early","middle","late","changeover"].includes(s)){const tmplId=templateMatrix[id]&&templateMatrix[id][d]?templateMatrix[id][d]:getDefaultTemplate(s);return{day:d,shiftType:s,templateId:tmplId}}}}
 
 // ── 次のシフト情報を取得
-function findNextShiftInfo(id,day){for(let d=day+1;d<=31;d++){const s=shiftMatrix[id][d];if(["early","middle","late","changeover"].includes(s)){const tmplId=templateMatrix[id]&&templateMatrix[id][d]?templateMatrix[id][d]:getDefaultTemplate(s);return{day:d,shiftType:s,templateId:tmplId}}}}
+function findNextShiftInfo(id,day){for(let d=day+1;d<=days.length;d++){const s=shiftMatrix[id][d];if(["early","middle","late","changeover"].includes(s)){const tmplId=templateMatrix[id]&&templateMatrix[id][d]?templateMatrix[id][d]:getDefaultTemplate(s);return{day:d,shiftType:s,templateId:tmplId}}}}
 
 // ── インターバル判定（実時刻で計算、前後両方をチェック）
 function wouldBreakInterval(id,day,shiftType,templateId){
@@ -721,19 +749,19 @@ function getPaidLeaveHours(id){return getPaidLeaveDays(id)*WORK_HOURS_PER_SHIFT}
 function getHours(id){return getActualWorkHours(id)+getPaidLeaveHours(id)}
 function getEquivalentWorkDays(id){return getWorkDays(id)+getPaidLeaveDays(id)}
 
-function assignMinimumAM(day,t,min){while(countAM(day,t)<min){const c=staffList.filter(st=>st.am).filter(st=>canAssign(st,day,t)).sort((a,b)=>scoreStaff(b,day,t,"AM")-scoreStaff(a,day,t,"AM"));if(!c.length){unfilled.push(`5/${day} ${label(t)}：AM最低人数を満たせません`);return}assign(c[0],day,t,"役")}}
-function assignMinimumCashKey(day,t,min){while(countKey(day,t)<min){const c=staffList.filter(st=>st.key).filter(st=>canAssign(st,day,t)).sort((a,b)=>scoreStaff(b,day,t,"cashKey")-scoreStaff(a,day,t,"cashKey"));if(!c.length){unfilled.push(`5/${day} ${label(t)}：金銭キー最低人数を満たせません`);return}assign(c[0],day,t,"役")}}
-function fillRequiredStaff(day,t,req){while(countAssigned(day,t)<req){const c=staffList.filter(st=>canAssign(st,day,t)).sort((a,b)=>scoreStaff(b,day,t,"general")-scoreStaff(a,day,t,"general"));if(!c.length){unfilled.push(`5/${day} ${label(t)}：必要人数 ${req}名に対して ${countAssigned(day,t)}名`);return}assign(c[0],day,t,"自")}}
+function assignMinimumAM(day,t,min){while(countAM(day,t)<min){const c=staffList.filter(st=>st.am).filter(st=>canAssign(st,day,t)).sort((a,b)=>scoreStaff(b,day,t,"AM")-scoreStaff(a,day,t,"AM"));if(!c.length){unfilled.push(`${monthDayLabel(day)} ${label(t)}：AM最低人数を満たせません`);return}assign(c[0],day,t,"役")}}
+function assignMinimumCashKey(day,t,min){while(countKey(day,t)<min){const c=staffList.filter(st=>st.key).filter(st=>canAssign(st,day,t)).sort((a,b)=>scoreStaff(b,day,t,"cashKey")-scoreStaff(a,day,t,"cashKey"));if(!c.length){unfilled.push(`${monthDayLabel(day)} ${label(t)}：金銭キー最低人数を満たせません`);return}assign(c[0],day,t,"役")}}
+function fillRequiredStaff(day,t,req){while(countAssigned(day,t)<req){const c=staffList.filter(st=>canAssign(st,day,t)).sort((a,b)=>scoreStaff(b,day,t,"general")-scoreStaff(a,day,t,"general"));if(!c.length){unfilled.push(`${monthDayLabel(day)} ${label(t)}：必要人数 ${req}名に対して ${countAssigned(day,t)}名`);return}assign(c[0],day,t,"自")}}
 
 function assign(st,day,t,tag){shiftMatrix[st.id][day]=t;addTag(st.id,day,tag);const defaultTmplId=getDefaultTemplate(t);if(defaultTmplId){templateMatrix[st.id][day]=defaultTmplId}if(t==="changeover")setNextDayAutoOff(st,day)}
-function setNextDayAutoOff(st,day){const nd=day+1;if(nd>31)return;if(shiftMatrix[st.id][nd]==="blank"){shiftMatrix[st.id][nd]="off";addTag(st.id,nd,"翌休")}}
+function setNextDayAutoOff(st,day){const nd=day+1;if(nd>days.length)return;if(shiftMatrix[st.id][nd]==="blank"){shiftMatrix[st.id][nd]="off";addTag(st.id,nd,"翌休")}}
 function applyChangeoverNextDayOff(day){staffList.forEach(st=>{if(shiftMatrix[st.id][day]==="changeover")setNextDayAutoOff(st,day)})}
 
 function canAssign(st,day,t){if(!st.auto)return false;if(shiftMatrix[st.id][day]!=="blank")return false;if(requirements[day][t].required<=0)return false;if(has("off",st.id,day)||has("paid",st.id,day)||has("unavailable",st.id,day))return false;if(t==="early"&&has("early",st.id,day))return false;if(t==="late"&&has("late",st.id,day))return false;if(t==="changeover"&&!st.changeover)return false;if(wouldExceedMaxConsecutiveWork(st.id,day))return false;const defaultTmplId=getDefaultTemplate(t);if(wouldBreakInterval(st.id,day,t,defaultTmplId))return false;if(st.allowedShiftTypes && st.allowedShiftTypes.length > 0 && !st.allowedShiftTypes.includes(t))return false;// TODO: weight の必要人数反映は次回改修（weight < 1 の場合、必要人数計算時に小数点対応が必要）
 return true}
 function wouldExceedMaxConsecutiveWork(id,day){return countConsecutiveBefore(id,day)+1+countConsecutiveAfter(id,day)>MAX_CONSEC}
 function countConsecutiveBefore(id,day){let c=0;for(let d=day-1;d>=1;d--){if(isWork(shiftMatrix[id][d]))c++;else break}return c}
-function countConsecutiveAfter(id,day){let c=0;for(let d=day+1;d<=31;d++){if(isWork(shiftMatrix[id][d]))c++;else break}return c}
+function countConsecutiveAfter(id,day){let c=0;for(let d=day+1;d<=days.length;d++){if(isWork(shiftMatrix[id][d]))c++;else break}return c}
 
 function getRotationBias(st,day,t){const idx=staffList.findIndex(s=>s.id===st.id);if(idx<0)return 0;const key=(day*7 + idx*11 + (t? t.charCodeAt(0):0)) % 11;return ((key % 5) - 2) * 0.35}
 
@@ -807,22 +835,22 @@ function fillTowardTargetHours(){
     });
   }
 }
-function markBlocks(){staffList.forEach(st=>{let start=1;while(start<=31){const s=shiftMatrix[st.id][start];if(!["early","middle","late"].includes(s)){start++;continue}let end=start;while(end+1<=31&&shiftMatrix[st.id][end+1]===s)end++;const len=end-start+1;if(len>=2){for(let d=start;d<=end;d++)addTag(st.id,d,len>=3?"ブロック":"連")}start=end+1}})}
+function markBlocks(){staffList.forEach(st=>{let start=1;while(start<=days.length){const s=shiftMatrix[st.id][start];if(!["early","middle","late"].includes(s)){start++;continue}let end=start;while(end+1<=days.length&&shiftMatrix[st.id][end+1]===s)end++;const len=end-start+1;if(len>=2){for(let d=start;d<=end;d++)addTag(st.id,d,len>=3?"ブロック":"連")}start=end+1}})}
 
 function validateFinal(){errors=[];unfilled=[];// TODO: countForFloor:false と weight < 1 のスタッフを必要人数充足チェックから除外する処理を次回追加
-days.forEach(day=>{for(const t of["early","late","middle","changeover"]){const req=requirements[day][t];if(req.required>0&&countAssigned(day,t)<req.required)unfilled.push(`5/${day} ${label(t)}：必要${req.required} / 配置${countAssigned(day,t)}`);if(req.minAM>0&&countAM(day,t)<req.minAM)unfilled.push(`5/${day} ${label(t)}：AM不足`);if(req.minKey>0&&countKey(day,t)<req.minKey)unfilled.push(`5/${day} ${label(t)}：金銭キー不足`)}});staffList.forEach(st=>{let consec=0;days.forEach(day=>{const s=shiftMatrix[st.id][day];if(isWork(s))consec++;else consec=0;if(consec>MAX_CONSEC)errors.push(`${st.name}：5/${day}時点で${consec}連勤`);if(s==="early"&&has("early",st.id,day))errors.push(`${st.name} 5/${day}：早番不可に早番`);if(s==="late"&&has("late",st.id,day))errors.push(`${st.name} 5/${day}：遅番不可に遅番`);if(isWork(s)&&(has("off",st.id,day)||has("paid",st.id,day)||has("unavailable",st.id,day)))errors.push(`${st.name} 5/${day}：希望休/有休/不可に勤務`);if(s==="changeover"&&!st.changeover)errors.push(`${st.name} 5/${day}：入替不可者に入替`);if(day>1&&shiftMatrix[st.id][day-1]==="changeover"&&isWork(s))errors.push(`${st.name} 5/${day}：入替翌日に勤務`)})});staffList.forEach(st=>{days.forEach(day=>{const s=shiftMatrix[st.id][day];if(isWork(s)){const tmplId=templateMatrix[st.id]&&templateMatrix[st.id][day]?templateMatrix[st.id][day]:getDefaultTemplate(s);const prevInfo=findPrevShiftInfo(st.id,day);if(prevInfo){const nsDateTime=buildShiftDateTime(day,tmplId);const prevDateTime=buildShiftDateTime(prevInfo.day,prevInfo.templateId);if(nsDateTime&&prevDateTime){const intervalHours=(nsDateTime.start-prevDateTime.end)/(1000*60*60);if(intervalHours<MIN_INTERVAL_HOURS)errors.push(`${st.name} 5/${day}：勤務間インターバル不足（${intervalHours.toFixed(1)}時間）`)}}}})})}
+days.forEach(day=>{for(const t of["early","late","middle","changeover"]){const req=requirements[day][t];if(req.required>0&&countAssigned(day,t)<req.required)unfilled.push(`${monthDayLabel(day)} ${label(t)}：必要${req.required} / 配置${countAssigned(day,t)}`);if(req.minAM>0&&countAM(day,t)<req.minAM)unfilled.push(`${monthDayLabel(day)} ${label(t)}：AM不足`);if(req.minKey>0&&countKey(day,t)<req.minKey)unfilled.push(`${monthDayLabel(day)} ${label(t)}：金銭キー不足`)}});staffList.forEach(st=>{let consec=0;days.forEach(day=>{const s=shiftMatrix[st.id][day];if(isWork(s))consec++;else consec=0;if(consec>MAX_CONSEC)errors.push(`${st.name}：${monthDayLabel(day)}時点で${consec}連勤`);if(s==="early"&&has("early",st.id,day))errors.push(`${st.name} ${monthDayLabel(day)}：早番不可に早番`);if(s==="late"&&has("late",st.id,day))errors.push(`${st.name} ${monthDayLabel(day)}：遅番不可に遅番`);if(isWork(s)&&(has("off",st.id,day)||has("paid",st.id,day)||has("unavailable",st.id,day)))errors.push(`${st.name} ${monthDayLabel(day)}：希望休/有休/不可に勤務`);if(s==="changeover"&&!st.changeover)errors.push(`${st.name} ${monthDayLabel(day)}：入替不可者に入替`);if(day>1&&shiftMatrix[st.id][day-1]==="changeover"&&isWork(s))errors.push(`${st.name} ${monthDayLabel(day)}：入替翌日に勤務`)})});staffList.forEach(st=>{days.forEach(day=>{const s=shiftMatrix[st.id][day];if(isWork(s)){const tmplId=templateMatrix[st.id]&&templateMatrix[st.id][day]?templateMatrix[st.id][day]:getDefaultTemplate(s);const prevInfo=findPrevShiftInfo(st.id,day);if(prevInfo){const nsDateTime=buildShiftDateTime(day,tmplId);const prevDateTime=buildShiftDateTime(prevInfo.day,prevInfo.templateId);if(nsDateTime&&prevDateTime){const intervalHours=(nsDateTime.start-prevDateTime.end)/(1000*60*60);if(intervalHours<MIN_INTERVAL_HOURS)errors.push(`${st.name} ${monthDayLabel(day)}：勤務間インターバル不足（${intervalHours.toFixed(1)}時間）`)}}}})})}
 
 function label(t){return shiftDefs[t]?.label||t}
-function updateCards(){const auto=staffList.filter(s=>s.auto);const avg=(auto.reduce((sum,s)=>sum+getWorkDays(s.id),0)/auto.length).toFixed(1);const avgHours=(auto.reduce((sum,s)=>sum+getHours(s.id),0)/auto.length).toFixed(1);const covered=days.filter(d=>totalActual(d)>=totalRequired(d)).length;const coverage=Math.round(covered/31*100);const roleOk=days.filter(day=>{let ok=true;for(const t of["early","late","middle","changeover"]){const req=requirements[day][t];if(req.required<=0)continue;if(req.minAM>0&&countAM(day,t)<req.minAM)ok=false;if(req.minKey>0&&countKey(day,t)<req.minKey)ok=false}return ok}).length;const roleRate=Math.round(roleOk/31*100);let wc=0,bc=0;auto.forEach(st=>days.forEach(day=>{if(["early","middle","late"].includes(shiftMatrix[st.id][day])){wc++;if((cellTags[st.id][day]||[]).includes("ブロック"))bc++}}));const blockRate=wc?Math.round(bc/wc*100):0;document.getElementById("avgWorkDays").textContent=avg+"日";document.getElementById("avgWorkHours").textContent=avgHours+"h";document.getElementById("blockRate").textContent=blockRate+"%";document.getElementById("coverageRate").textContent=coverage+"%";document.getElementById("roleRate").textContent=roleRate+"%";document.getElementById("errorCount").textContent=errors.length+"件"}
+function updateCards(){const auto=staffList.filter(s=>s.auto);const avg=(auto.reduce((sum,s)=>sum+getWorkDays(s.id),0)/auto.length).toFixed(1);const avgHours=(auto.reduce((sum,s)=>sum+getHours(s.id),0)/auto.length).toFixed(1);const covered=days.filter(d=>totalActual(d)>=totalRequired(d)).length;const coverage=Math.round(covered/days.length*100);const roleOk=days.filter(day=>{let ok=true;for(const t of["early","late","middle","changeover"]){const req=requirements[day][t];if(req.required<=0)continue;if(req.minAM>0&&countAM(day,t)<req.minAM)ok=false;if(req.minKey>0&&countKey(day,t)<req.minKey)ok=false}return ok}).length;const roleRate=Math.round(roleOk/days.length*100);let wc=0,bc=0;auto.forEach(st=>days.forEach(day=>{if(["early","middle","late"].includes(shiftMatrix[st.id][day])){wc++;if((cellTags[st.id][day]||[]).includes("ブロック"))bc++}}));const blockRate=wc?Math.round(bc/wc*100):0;document.getElementById("avgWorkDays").textContent=avg+"日";document.getElementById("avgWorkHours").textContent=avgHours+"h";document.getElementById("blockRate").textContent=blockRate+"%";document.getElementById("coverageRate").textContent=coverage+"%";document.getElementById("roleRate").textContent=roleRate+"%";document.getElementById("errorCount").textContent=errors.length+"件"}
 function updateCardsBlank(){["avgWorkDays","avgWorkHours","blockRate","coverageRate","roleRate","errorCount"].forEach(id=>document.getElementById(id).textContent="--")}
 function renderWarnings(){let html=[];
 html.push(`<li><strong style="color:var(--accent);">現在の必要人数プリセット：${currentPreset}</strong></li>`);
 if(errors.length===0)html.push("<li>重大エラーはありません。最大4連勤・インターバル（実時刻判定）・希望休を候補除外で処理しています。</li>");else html.push(...errors.slice(0,10).map(e=>`<li><strong style="color:var(--warn)">重大：</strong>${e}</li>`));if(unfilled.length===0)html.push("<li>未充足はありません。AM・金銭キー・必要人数を満たしています。</li>");else html.push(...unfilled.slice(0,12).map(e=>`<li><strong style="color:var(--accent3)">未充足：</strong>${e}</li>`));
 if(generationNotices.length>0)html.push(...generationNotices.slice(0,8).map(e=>`<li><strong style="color:#6d28d9">生成時通知：</strong>${e}</li>`));html.push("<li>必要人数を満たした後、目標勤務時間に不足しているスタッフを、最大1割程度の余剰範囲内で追加配置します。</li>");html.push("<li>勤務は3〜4日単位の同一区分ブロックを優先し、平均160時間前後を目標に配置。インターバル判定は勤務テンプレートの実時刻で計算します。</li>");document.getElementById("warningList").innerHTML=html.join("")}
-function isWeekStartMonday(day){return new Date(2026,4,day).getDay()===1}
+function isWeekStartMonday(day){return new Date(PLAN_YEAR,PLAN_MONTH,day).getDay()===1}
 function addWeekStartClass(el,day){if(isWeekStartMonday(day))el.classList.add("week-start")}
 function buildSheet(){const tbody=document.getElementById("sheetBody");tbody.innerHTML="";buildStoreRows(tbody);buildSummaryRows(tbody);buildEventRow(tbody);buildDateHeader(tbody);buildStaffRows(tbody)}
-function buildStoreRows(tbody){const tr1=document.createElement("tr");tr1.innerHTML=`<td class="store-cell" colspan="3">サンプル店舗 — デモ環境</td><td colspan="${days.length}" style="text-align:left;font-weight:700;background:var(--surface2);color:var(--text-muted);padding-left:10px;">仮シフト自動生成 v3 20日寄せ強化版 2026年5月　状態：${generated?"✅ 自動生成済み":"⬜ 未生成"}</td>`;tbody.appendChild(tr1);const tr2=document.createElement("tr");tr2.innerHTML=`<td class="store-cell" colspan="3">条件概要</td><td colspan="${days.length}" style="text-align:left;font-weight:500;background:rgba(79,142,247,.08);color:var(--text-muted);padding-left:10px;font-size:11px;">最大4連勤 / 11時間インターバル（実時刻判定） / 目標160時間 / 3〜4勤ブロック / AM・金銭キー先行配置 / 勤務テンプレート対応 / SM対象外</td>`;tbody.appendChild(tr2)}
+function buildStoreRows(tbody){const tr1=document.createElement("tr");tr1.innerHTML=`<td class="store-cell" colspan="3">サンプル店舗 — デモ環境</td><td colspan="${days.length}" style="text-align:left;font-weight:700;background:var(--surface2);color:var(--text-muted);padding-left:10px;">仮シフト自動生成 ${planMonthLabel()}　状態：${generated?"✅ 自動生成済み":"⬜ 未生成"}</td>`;tbody.appendChild(tr1);const tr2=document.createElement("tr");tr2.innerHTML=`<td class="store-cell" colspan="3">条件概要</td><td colspan="${days.length}" style="text-align:left;font-weight:500;background:rgba(79,142,247,.08);color:var(--text-muted);padding-left:10px;font-size:11px;">最大4連勤 / 11時間インターバル（実時刻判定） / 目標160時間 / 3〜4勤ブロック / AM・金銭キー先行配置 / 勤務テンプレート対応 / SM対象外</td>`;tbody.appendChild(tr2)}
 function buildSummaryRows(tbody){const rows=[{label:"早番人数",values:days.map(d=>countAssigned(d,"early"))},{label:"中番人数",values:days.map(d=>countAssigned(d,"middle"))},{label:"遅番人数",values:days.map(d=>countAssigned(d,"late"))},{label:"入替人数",values:days.map(d=>countAssigned(d,"changeover"))},{label:"必要人数",values:days.map(d=>totalRequired(d))},{label:"投入人数",values:days.map(d=>totalActual(d))},{label:"過不足",values:days.map(d=>totalActual(d)-totalRequired(d))}];rows.forEach(row=>{const tr=document.createElement("tr");const total=row.values.reduce((s,v)=>s+Number(v||0),0);tr.innerHTML=`<td class="summary-label">${row.label}</td><td class="summary-total-label">計</td><td class="summary-total">${total}</td>`;days.forEach((day,i)=>{const td=document.createElement("td");td.className="day-col";addWeekStartClass(td,day);td.textContent=row.values[i];if(row.label==="過不足"){const v=Number(row.values[i]);if(v<0)td.classList.add("shortage");else if(v>0)td.classList.add("surplus");else td.classList.add("exact")}tr.appendChild(td)});tbody.appendChild(tr)})}
 function buildEventRow(tbody){
   const tr=document.createElement("tr");
@@ -849,9 +877,9 @@ function buildEventRow(tbody){
   });
   tbody.appendChild(tr);
 }
-function buildDateHeader(tbody){const tr=document.createElement("tr");tr.innerHTML=`<th class="staff-head">従業員</th><th class="staff-info-head" colspan="2">区分／月計</th>`;days.forEach(day=>{const date=new Date(2026,4,day);const week=["日","月","火","水","木","金","土"][date.getDay()];const th=document.createElement("th");th.className="date-head day-col";addWeekStartClass(th,day);if(week==="日")th.classList.add("sunday");if(week==="土")th.classList.add("saturday");th.innerHTML=`5/${day}<br>(${week})`;tr.appendChild(th)});tbody.appendChild(tr)}
+function buildDateHeader(tbody){const tr=document.createElement("tr");tr.innerHTML=`<th class="staff-head">従業員</th><th class="staff-info-head" colspan="2">区分／月計</th>`;days.forEach(day=>{const date=new Date(PLAN_YEAR,PLAN_MONTH,day);const week=["日","月","火","水","木","金","土"][date.getDay()];const th=document.createElement("th");th.className="date-head day-col";addWeekStartClass(th,day);if(week==="日")th.classList.add("sunday");if(week==="土")th.classList.add("saturday");th.innerHTML=`${monthDayLabel(day)}<br>(${week})`;tr.appendChild(th)});tbody.appendChild(tr)}
 function buildStaffRows(tbody){staffList.forEach(st=>{const tr=document.createElement("tr");const nameTd=document.createElement("td");nameTd.className="staff-name";nameTd.innerHTML=`<div>${st.name}</div><div class="staff-sub"><span>${getWorkDays(st.id)}日</span><span>${getOffDays(st.id)}休</span><span>${getEquivalentWorkDays(st.id)}相当</span><span>${getHours(st.id)}h</span></div>`;tr.appendChild(nameTd);const roleTd=document.createElement("td");roleTd.className="staff-meta";roleTd.colSpan=2;roleTd.innerHTML=`${st.role}<br><span>${st.auto?"対象 ":"対象外 "}${st.am?"AM ":""}${st.key?"金銭 ":""}${st.changeover?"入替":""}</span>${st.allowedShiftTypes.length>0?`<br><span>制限: ${st.allowedShiftTypes.join("・")}</span>`:""}`;tr.appendChild(roleTd);days.forEach(day=>{const td=createShiftCell(st,day,shiftMatrix[st.id][day]||"blank");addWeekStartClass(td,day);tr.appendChild(td)});tbody.appendChild(tr)})}
-function createShiftCell(st,day,shiftType){const td=document.createElement("td");td.className="shift-cell day-col";td.dataset.staffId=st.id;td.dataset.staffName=st.name;td.dataset.day=day;td.dataset.dateLabel=`2026/5/${day}`;applyShiftToCell(td,shiftType,st.id,day);td.addEventListener("click",e=>{e.stopPropagation();selectCell(td,e)});return td}
+function createShiftCell(st,day,shiftType){const td=document.createElement("td");td.className="shift-cell day-col";td.dataset.staffId=st.id;td.dataset.staffName=st.name;td.dataset.day=day;td.dataset.dateLabel=`${PLAN_YEAR}/${PLAN_MONTH+1}/${day}`;applyShiftToCell(td,shiftType,st.id,day);td.addEventListener("click",e=>{e.stopPropagation();selectCell(td,e)});return td}
 
 function applyShiftToCell(td,shiftType,id,day){Object.values(shiftDefs).forEach(def=>td.classList.remove(def.className));td.classList.remove("violation");const def=shiftDefs[shiftType]||shiftDefs.blank;td.classList.add(def.className);let tagHtml="";const tags=cellTags[id]?.[day]||[];if(tags.includes("希"))tagHtml=`<span class="tag-mini tag-request">希</span>`;else if(tags.includes("有"))tagHtml=`<span class="tag-mini tag-request">有</span>`;else if(tags.includes("不"))tagHtml=`<span class="tag-mini tag-error">不</span>`;else if(tags.includes("早×"))tagHtml=`<span class="tag-mini" style="background:#dc2626;color:#fff;font-size:9px;">早×</span>`;else if(tags.includes("遅×"))tagHtml=`<span class="tag-mini" style="background:#dc2626;color:#fff;font-size:9px;">遅×</span>`;else if(tags.includes("翌休"))tagHtml=`<span class="tag-mini tag-auto-rest">翌休</span>`;else if(tags.includes("役"))tagHtml=`<span class="tag-mini tag-role">役</span>`;else if(tags.includes("ブロック"))tagHtml=`<span class="tag-mini tag-block">ブロック</span>`;else if(tags.includes("手"))tagHtml=`<span class="tag-mini tag-manual">手</span>`;else if(tags.includes("自"))tagHtml=`<span class="tag-mini tag-block">自</span>`;if(["off","requestOff","paid","unavailable","excluded"].includes(shiftType)){td.innerHTML=`<span class="circle-mark">${def.label}</span>${tagHtml}`}else if(shiftType==="blank"){td.innerHTML=tagHtml}else{const tmplId=templateMatrix[id]&&templateMatrix[id][day]?templateMatrix[id][day]:getDefaultTemplate(shiftType);const tmpl=shiftTemplates[tmplId];if(tmpl){td.innerHTML=`<div class="time-two-lines"><div>${tmpl.start}</div><div>${tmpl.end}</div></div>${tagHtml}`}else{td.innerHTML=`<div class="time-two-lines"><div>--</div><div>--</div></div>${tagHtml}`}}}
 
@@ -877,7 +905,7 @@ function changePreset(presetName){
   }
 }
 
-function downloadCsv(){const header=["社員番号","氏名","区分",...days.map(d=>`5/${d}`),...days.map(d=>`5/${d}(時刻)`)];const lines=[header.join(",")];staffList.forEach(st=>{const shiftCells=days.map(day=>{const tmplId=templateMatrix[st.id]&&templateMatrix[st.id][day]?templateMatrix[st.id][day]:getDefaultTemplate(shiftMatrix[st.id][day]);const tmpl=shiftTemplates[tmplId];if(tmpl){return`${shiftDefs[shiftMatrix[st.id][day]]?.label||""}`}else{return shiftDefs[shiftMatrix[st.id][day]]?.label||""}});const timeCells=days.map(day=>{const tmplId=templateMatrix[st.id]&&templateMatrix[st.id][day]?templateMatrix[st.id][day]:getDefaultTemplate(shiftMatrix[st.id][day]);const tmpl=shiftTemplates[tmplId];if(tmpl){return`${tmpl.start}-${tmpl.end}`}else{return""}});lines.push([st.id,st.name,st.role,...shiftCells,...timeCells].join(","))});const blob=new Blob(["\uFEFF"+lines.join("\n")],{type:"text/csv;charset=utf-8;"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="shift_auto_generate_demo_templates.csv";a.click();URL.revokeObjectURL(url)}
+function downloadCsv(){const header=["社員番号","氏名","区分",...days.map(d=>`${monthDayLabel(d)}`),...days.map(d=>`${monthDayLabel(d)}(時刻)`)];const lines=[header.join(",")];staffList.forEach(st=>{const shiftCells=days.map(day=>{const tmplId=templateMatrix[st.id]&&templateMatrix[st.id][day]?templateMatrix[st.id][day]:getDefaultTemplate(shiftMatrix[st.id][day]);const tmpl=shiftTemplates[tmplId];if(tmpl){return`${shiftDefs[shiftMatrix[st.id][day]]?.label||""}`}else{return shiftDefs[shiftMatrix[st.id][day]]?.label||""}});const timeCells=days.map(day=>{const tmplId=templateMatrix[st.id]&&templateMatrix[st.id][day]?templateMatrix[st.id][day]:getDefaultTemplate(shiftMatrix[st.id][day]);const tmpl=shiftTemplates[tmplId];if(tmpl){return`${tmpl.start}-${tmpl.end}`}else{return""}});lines.push([st.id,st.name,st.role,...shiftCells,...timeCells].join(","))});const blob=new Blob(["\uFEFF"+lines.join("\n")],{type:"text/csv;charset=utf-8;"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="shift_"+planMonthKey()+".csv";a.click();URL.revokeObjectURL(url)}
 
 document.addEventListener("click",e=>{const menu=document.getElementById("quickMenu");if(!menu.contains(e.target))hideQuickMenu()});
 
@@ -1088,12 +1116,12 @@ function renderDailyRequirements(){
   days.forEach(day=>{
     const daily=getDailyRequirement(day);
     const tr=document.createElement("tr");
-    const date=new Date(2026,4,day);
+    const date=new Date(PLAN_YEAR,PLAN_MONTH,day);
     const weekLabels=["日","月","火","水","木","金","土"];
 
     const dateTd=document.createElement("td");
     dateTd.className="date-col";
-    dateTd.textContent=`5/${day}`;
+    dateTd.textContent=`${monthDayLabel(day)}`;
     tr.appendChild(dateTd);
 
     const weekdayTd=document.createElement("td");
@@ -1226,6 +1254,249 @@ function updateStaffSetting(staffId,field,value){
   else if(field==="target")st.target=value;
   else if(field==="pref")st.pref=value;
   else if(field==="note")st.note=value;
+}
+
+// ════════════════════════════════════════════════════════════
+// 希望提出の取込（提出コード）・提出状況・紙提出の手入力【機能追加】
+// ════════════════════════════════════════════════════════════
+let submissionLog={};// staffId -> {at,source:"code"|"paper",month}
+const WISH_KIND_LABELS={off:"休み",paid:"有休",early:"早番希望",late:"遅番希望",unavailable:"勤務不可"};
+
+function escHtml(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;")}
+
+function clampDayArray(arr){
+  return Array.isArray(arr)?[...new Set(arr.map(Number).filter(x=>Number.isInteger(x)&&x>=1&&x<=days.length))].sort((a,b)=>a-b):[];
+}
+// 希望（wish形式）→ requestMap（割当除外形式）への変換
+// 早番希望の日＝遅番に入れない(late)、遅番希望の日＝早番に入れない(early)
+function wishToRequest(w){
+  return {
+    off:clampDayArray(w.off),
+    paid:clampDayArray(w.paid),
+    unavailable:clampDayArray(w.unavailable),
+    early:clampDayArray(w.late),
+    late:clampDayArray(w.early)
+  };
+}
+// requestMap → wish形式（手入力パネルの初期表示用・上の逆変換）
+function requestToWish(r){
+  r=r||{off:[],paid:[],unavailable:[],early:[],late:[]};
+  return {off:[...(r.off||[])],paid:[...(r.paid||[])],unavailable:[...(r.unavailable||[])],early:[...(r.late||[])],late:[...(r.early||[])]};
+}
+
+function applySubmission(d){
+  if(!d||d.v!==1||!d.code)return{ok:false,msg:"形式が不正なコードです"};
+  const code=String(d.code).trim();
+  const st=staffList.find(s=>s.id===code);
+  const nameLabel=d.name?String(d.name)+"（"+code+"）":code;
+  if(!st)return{ok:false,msg:nameLabel+"：社員コードがスタッフ設定に見つかりません。先にスタッフ設定へ追加してください"};
+  if(d.month&&d.month!==planMonthKey())return{ok:false,msg:nameLabel+"：対象月 "+d.month+" のコードです（現在の対象月は "+planMonthKey()+"）"};
+  requestMap[st.id]=wishToRequest(d.wish||{});
+  submissionLog[st.id]={at:new Date().toLocaleString("ja-JP"),source:"code",month:planMonthKey()};
+  const r=requestMap[st.id];
+  return {ok:true,msg:st.name+"（"+st.id+"）を取込：休"+r.off.length+"・有"+r.paid.length+"・早希"+r.late.length+"・遅希"+r.early.length};
+}
+
+function importSubmissionCodes(){
+  const raw=document.getElementById("submissionCodeInput").value;
+  const re=/\[SHIFT\]([\s\S]*?)\[\/SHIFT\]/g;
+  const results=[];
+  let m,found=0;
+  const openCount=(raw.match(/\[SHIFT\]/g)||[]).length;
+  while((m=re.exec(raw))!==null){
+    found++;
+    try{results.push(applySubmission(JSON.parse(m[1])))}
+    catch(e){results.push({ok:false,msg:"コードを読み取れません（途中で改変・欠落の可能性）"})}
+  }
+  const html=[];
+  if(openCount>found)html.push('<div style="color:var(--warn);font-weight:700;">⚠ 終了マーカー[/SHIFT]まで届いていないコードが '+(openCount-found)+' 件あります。本人に全文コピーをやり直してもらってください。</div>');
+  if(found===0&&openCount===0)html.push('<div style="color:var(--warn);">コードが見つかりません。[SHIFT] から [/SHIFT] までを含めて貼り付けてください。</div>');
+  results.forEach(r=>html.push('<div style="color:'+(r.ok?'var(--accent2)':'var(--warn)')+';">'+(r.ok?'✅ ':'❌ ')+escHtml(r.msg)+'</div>'));
+  document.getElementById("importResultBox").innerHTML=html.join("");
+  if(results.some(r=>r.ok)){
+    document.getElementById("submissionCodeInput").value="";
+    renderSubmissionStatus();
+    renderRequestPreview();
+    if(generated)noticeRegenerate("希望データ");
+  }
+}
+
+function renderSubmissionStatus(){
+  const table=document.getElementById("submissionStatusTable");
+  if(!table)return;
+  table.innerHTML="";
+  const thead=document.createElement("thead");
+  const hr=document.createElement("tr");
+  ["社員コード","氏名","提出状況","提出日時","希望内容","操作"].forEach(h=>{
+    const th=document.createElement("th");th.textContent=h;hr.appendChild(th);
+  });
+  thead.appendChild(hr);table.appendChild(thead);
+  const tbody=document.createElement("tbody");
+  let submitted=0,target=0;
+  staffList.forEach(st=>{
+    const tr=document.createElement("tr");
+    const idTd=document.createElement("td");idTd.className="settings-id-col";idTd.textContent=st.id;tr.appendChild(idTd);
+    const nameTd=document.createElement("td");nameTd.textContent=st.name;tr.appendChild(nameTd);
+    const log=submissionLog[st.id];
+    const stTd=document.createElement("td");
+    const dtTd=document.createElement("td");
+    if(!st.auto){
+      stTd.textContent="対象外";stTd.className="settings-id-col";dtTd.textContent="--";
+    }else{
+      target++;
+      if(log&&log.month===planMonthKey()){
+        submitted++;
+        stTd.textContent=log.source==="paper"?"✅ 提出済（紙・手入力）":"✅ 提出済（コード）";
+        stTd.style.color="var(--accent2)";stTd.style.fontWeight="700";
+        dtTd.textContent=log.at;
+      }else{
+        stTd.textContent="⬜ 未提出";stTd.style.color="var(--warn)";stTd.style.fontWeight="700";
+        dtTd.textContent="--";
+      }
+    }
+    tr.appendChild(stTd);tr.appendChild(dtTd);
+    const sumTd=document.createElement("td");
+    const r=requestMap[st.id];
+    sumTd.textContent=r?("休"+(r.off||[]).length+"・有"+(r.paid||[]).length+"・早×"+(r.early||[]).length+"・遅×"+(r.late||[]).length+"・不可"+(r.unavailable||[]).length):"--";
+    tr.appendChild(sumTd);
+    const opTd=document.createElement("td");
+    const manualBtn=document.createElement("button");
+    manualBtn.textContent="手入力";
+    manualBtn.onclick=()=>openManualEntry(st.id);
+    opTd.appendChild(manualBtn);
+    tr.appendChild(opTd);
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  const tfoot=document.createElement("tfoot");
+  const fr=document.createElement("tr");
+  const fc=document.createElement("td");
+  fc.colSpan=6;fc.style.fontWeight="700";fc.style.padding="8px";
+  fc.textContent=planMonthLabel()+"分：提出済 "+submitted+" 名 ／ 対象 "+target+" 名（未提出 "+(target-submitted)+" 名）";
+  fr.appendChild(fc);tfoot.appendChild(fr);table.appendChild(tfoot);
+}
+
+// ── 紙提出の手入力パネル
+let manualTargetId=null,manualKind="off",manualDraft={};
+function openManualEntry(staffId){
+  manualTargetId=staffId;
+  manualKind="off";
+  const wish=requestToWish(requestMap[staffId]);
+  manualDraft={};
+  Object.keys(wish).forEach(kind=>wish[kind].forEach(d=>{manualDraft[d]=kind}));
+  renderManualEntry();
+  const panel=document.getElementById("manualEntryPanel");
+  panel.style.display="block";
+  if(panel.scrollIntoView)panel.scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+function closeManualEntry(){
+  manualTargetId=null;
+  document.getElementById("manualEntryPanel").style.display="none";
+}
+function setManualKind(kind){manualKind=kind;renderManualEntry()}
+function toggleManualDay(day){
+  if(manualDraft[day]===manualKind)delete manualDraft[day];
+  else manualDraft[day]=manualKind;
+  renderManualEntry();
+}
+function clearManualDraft(){manualDraft={};renderManualEntry()}
+function commitManualEntry(){
+  const st=staffList.find(s=>s.id===manualTargetId);
+  if(!st)return;
+  const wish={off:[],paid:[],early:[],late:[],unavailable:[]};
+  Object.keys(manualDraft).forEach(d=>{const k=manualDraft[d];if(wish[k])wish[k].push(Number(d))});
+  requestMap[st.id]=wishToRequest(wish);
+  submissionLog[st.id]={at:new Date().toLocaleString("ja-JP"),source:"paper",month:planMonthKey()};
+  closeManualEntry();
+  renderSubmissionStatus();
+  renderRequestPreview();
+  if(generated)noticeRegenerate("希望データ");
+}
+function renderManualEntry(){
+  const panel=document.getElementById("manualEntryPanel");
+  if(!panel)return;
+  panel.innerHTML="";
+  const st=staffList.find(s=>s.id===manualTargetId);
+  if(!st){panel.style.display="none";return}
+  const title=document.createElement("div");
+  title.style.cssText="font-weight:700;margin-bottom:8px;";
+  title.textContent="紙提出の手入力："+st.name+"（"+st.id+"）｜"+planMonthLabel();
+  panel.appendChild(title);
+  const kindRow=document.createElement("div");
+  kindRow.style.cssText="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;";
+  Object.keys(WISH_KIND_LABELS).forEach(kind=>{
+    const btn=document.createElement("button");
+    btn.textContent=WISH_KIND_LABELS[kind];
+    if(kind===manualKind){btn.className="primary"}
+    btn.onclick=()=>setManualKind(kind);
+    kindRow.appendChild(btn);
+  });
+  panel.appendChild(kindRow);
+  const hint=document.createElement("div");
+  hint.style.cssText="font-size:11px;color:var(--text-muted);margin-bottom:8px;";
+  hint.textContent="種別を選んで日付をクリック（同じ日を再クリックで取消）。早番希望→遅×、遅番希望→早×として登録されます。";
+  panel.appendChild(hint);
+  const grid=document.createElement("div");
+  grid.style.cssText="display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:4px;margin-bottom:10px;";
+  const kindColors={off:"#fee2e2",paid:"#dcfce7",early:"#dbeafe",late:"#ede9fe",unavailable:"#e5e7eb"};
+  const kindShort={off:"休",paid:"有",early:"早希",late:"遅希",unavailable:"不可"};
+  days.forEach(day=>{
+    const dow=new Date(PLAN_YEAR,PLAN_MONTH,day).getDay();
+    const btn=document.createElement("button");
+    const kind=manualDraft[day];
+    btn.style.cssText="min-height:42px;font-size:12px;line-height:1.2;padding:4px 2px;"+(kind?"background:"+kindColors[kind]+";font-weight:700;":"");
+    btn.textContent=day+"("+["日","月","火","水","木","金","土"][dow]+")"+(kind?" "+kindShort[kind]:"");
+    btn.onclick=()=>toggleManualDay(day);
+    grid.appendChild(btn);
+  });
+  panel.appendChild(grid);
+  const actionRow=document.createElement("div");
+  actionRow.style.cssText="display:flex;gap:8px;";
+  const saveBtn=document.createElement("button");
+  saveBtn.className="primary";saveBtn.textContent="この内容で登録（紙提出）";
+  saveBtn.onclick=commitManualEntry;
+  const clearAllBtn=document.createElement("button");
+  clearAllBtn.className="danger";clearAllBtn.textContent="全消し";
+  clearAllBtn.onclick=()=>{if(confirm("入力中の内容をすべて消します（登録ボタンを押すまで確定しません）。よろしいですか？"))clearManualDraft()};
+  const cancelBtn=document.createElement("button");
+  cancelBtn.textContent="キャンセル";
+  cancelBtn.onclick=closeManualEntry;
+  actionRow.appendChild(saveBtn);actionRow.appendChild(clearAllBtn);actionRow.appendChild(cancelBtn);
+  panel.appendChild(actionRow);
+}
+
+// ════════════════════════════════════════════════════════════
+// 対象月の切替【機能追加】
+// ════════════════════════════════════════════════════════════
+function changePlanMonth(val){
+  const m=/^(\d{4})-(\d{2})$/.exec(String(val));
+  if(!m){document.getElementById("planMonthInput").value=planMonthKey();return}
+  const y=Number(m[1]),mo=Number(m[2])-1;
+  if(mo<0||mo>11){document.getElementById("planMonthInput").value=planMonthKey();return}
+  if(y===PLAN_YEAR&&mo===PLAN_MONTH)return;
+  if(!confirm("対象月を "+y+"年"+(mo+1)+"月 に変更します。\n生成済みシフトと日別設定（イベント種別・必要人数の手入力）はクリアされます。\nスタッフ設定・イベント種別/勤務テンプレ定義・取込済みの希望データは保持されます。\nよろしいですか？")){
+    document.getElementById("planMonthInput").value=planMonthKey();
+    return;
+  }
+  PLAN_YEAR=y;PLAN_MONTH=mo;
+  days=buildDays();
+  dailyEventTypes={};
+  dailyRequirementOverrides={};
+  requirements=buildReq();
+  generationNotices=[];
+  generated=false;
+  initMatrix();initTemplateMatrix();applyFixed();
+  updatePlanMonthUI();
+  buildSheet();updateCardsBlank();
+  renderDailyRequirements();
+  if(typeof renderSubmissionStatus==="function")renderSubmissionStatus();
+  document.getElementById("warningList").innerHTML='<li><strong style="color:var(--accent);">対象月を '+planMonthLabel()+' に変更しました。希望提出を取込後、「仮シフトを自動生成」を実行してください。</strong></li>';
+}
+function updatePlanMonthUI(){
+  const el=document.getElementById("headerMonthLabel");
+  if(el)el.textContent=planMonthLabel();
+  const inp=document.getElementById("planMonthInput");
+  if(inp)inp.value=planMonthKey();
 }
 
 // ════════════════════════════════════════════════════════════
@@ -1556,6 +1827,8 @@ renderStaffSettings();
 renderDailyRequirements();
 renderEventTypeSettings();
 renderShiftTemplateSettings();
+renderSubmissionStatus();
+updatePlanMonthUI();
 
 // ── JSON読込・保存機能 ──
 
@@ -1586,7 +1859,7 @@ function saveStoreMasterJson(){
     meta:{
       type:"store_master",
       name:"ローカル店舗設定",
-      month:"2026-05",
+      month:planMonthKey(),
       exportedAt:now.iso,
       warning:"このJSONは実スタッフ情報を含む可能性があります。GitHub・社内ポータル・外部共有禁止"
     },
@@ -1672,6 +1945,10 @@ function loadShiftRequestsJsonFromFile(file){
       if(typeof json.requestMap==="object"&&json.requestMap!==null){
         requestMap=json.requestMap;
       }
+      if(typeof json.submissionLog==="object"&&json.submissionLog!==null){
+        submissionLog=json.submissionLog;
+      }
+      renderSubmissionStatus();
       
       // renderRequestPreview() を実行して、希望確認表示を行う
       renderRequestPreview();
@@ -1754,13 +2031,14 @@ function saveShiftRequestsJson(){
   const data={
     meta:{
       type:"shift_requests",
-      month:"2026-05",
+      month:planMonthKey(),
       name:"希望データ",
       exportedAt:now.iso,
       source:"admin_local_export",
       warning:"このJSONは希望休・有休などの個人情報を含む可能性があります。外部共有禁止"
     },
-    requestMap:requestMap
+    requestMap:requestMap,
+    submissionLog:submissionLog
   };
   const filename=`shift_requests_local_${now.filename}.json`;
   downloadJsonFile(data,filename);
@@ -1785,6 +2063,8 @@ function clearShiftRequests(){
     };
   });
   
+  submissionLog={};
+  renderSubmissionStatus();
   // renderRequestPreview() を実行
   renderRequestPreview();
   
