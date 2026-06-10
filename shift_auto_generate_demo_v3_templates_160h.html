@@ -184,6 +184,8 @@ table.shift-sheet{border-collapse:collapse;width:max-content;min-width:100%;font
     <button onclick="document.getElementById('shiftRequestsInput').click()">📋 希望データJSON読込</button>
     <button onclick="saveShiftRequestsJson()">📝 希望データJSON保存</button>
     <button onclick="clearShiftRequests()">🗑 希望データをクリア</button>
+    <button class="danger" onclick="resetWorkData()">⟲ 作業データを全消去（初期デモに戻す）</button>
+    <span id="autosaveStatus" style="font-size:11px;color:var(--text-dim);font-weight:700;">自動保存：有効</span>
     <input type="file" id="storeMasterInput" accept=".json" style="display:none;" onchange="handleStoreMasterFile(this.files[0])">
     <input type="file" id="shiftRequestsInput" accept=".json" style="display:none;" onchange="handleShiftRequestsFile(this.files[0])">
   </div>
@@ -734,8 +736,8 @@ function applyManagerMeeting(){
   });
 }
 
-function generateShift(){_seed=Date.now()^(Math.random()*0xffffffff)|0;generationNotices=[];initMatrix();initTemplateMatrix();applyFixed();applyManagerMeeting();days.forEach(day=>{for(const t of["early","late","middle","changeover"]){const req=requirements[day][t];if(!req||req.required<=0)continue;assignMinimumAM(day,t,req.minAM);assignMinimumCashKey(day,t,req.minKey);fillRequiredStaff(day,t,req.required);if(t==="changeover")applyChangeoverNextDayOff(day)}});days.forEach(day=>repairDailyShortage(day));fillTowardTargetHours();staffList.forEach(st=>days.forEach(day=>{if(shiftMatrix[st.id][day]==="blank")shiftMatrix[st.id][day]="off"}));markBlocks();generated=true;validateFinal();buildSheet();updateCards();renderWarnings();renderStaffSettings();renderDailyRequirements();renderShiftTemplateSettings()}
-function clearGenerated(){generationNotices=[];initMatrix();initTemplateMatrix();generated=false;updateCardsBlank();buildSheet();document.getElementById("warningList").innerHTML="<li>自動生成分をクリアしました。</li>"}
+function generateShift(){_seed=Date.now()^(Math.random()*0xffffffff)|0;generationNotices=[];initMatrix();initTemplateMatrix();applyFixed();applyManagerMeeting();days.forEach(day=>{for(const t of["early","late","middle","changeover"]){const req=requirements[day][t];if(!req||req.required<=0)continue;assignMinimumAM(day,t,req.minAM);assignMinimumCashKey(day,t,req.minKey);fillRequiredStaff(day,t,req.required);if(t==="changeover")applyChangeoverNextDayOff(day)}});days.forEach(day=>repairDailyShortage(day));fillTowardTargetHours();staffList.forEach(st=>days.forEach(day=>{if(shiftMatrix[st.id][day]==="blank")shiftMatrix[st.id][day]="off"}));markBlocks();generated=true;validateFinal();buildSheet();updateCards();renderWarnings();renderStaffSettings();renderDailyRequirements();renderShiftTemplateSettings();saveWorkData()}
+function clearGenerated(){generationNotices=[];initMatrix();initTemplateMatrix();generated=false;updateCardsBlank();buildSheet();document.getElementById("warningList").innerHTML="<li>自動生成分をクリアしました。</li>";saveWorkData()}
 function countAssigned(day,t){return staffList.filter(st=>shiftMatrix[st.id][day]===t).length}
 function countAM(day,t){return staffList.filter(st=>st.am&&shiftMatrix[st.id][day]===t).length}
 function countKey(day,t){return staffList.filter(st=>st.key&&shiftMatrix[st.id][day]===t).length}
@@ -886,7 +888,7 @@ function applyShiftToCell(td,shiftType,id,day){Object.values(shiftDefs).forEach(
 function selectCell(td,event){selectedCell=td;showQuickMenu(td,event)}
 function showQuickMenu(td,event){const menu=document.getElementById("quickMenu");document.getElementById("quickTitle").textContent=`${td.dataset.staffName}｜${td.dataset.dateLabel}`;renderQuickTemplates(td);menu.style.display="block";let left=event.clientX+10,top=event.clientY+10;if(left+230>innerWidth)left=innerWidth-242;if(top+270>innerHeight)top=innerHeight-282;menu.style.left=left+"px";menu.style.top=top+"px"}
 function hideQuickMenu(){document.getElementById("quickMenu").style.display="none";selectedCell=null}
-function changeSelectedShift(shiftType){if(!selectedCell)return;const id=selectedCell.dataset.staffId;const day=Number(selectedCell.dataset.day);shiftMatrix[id][day]=shiftType;const defaultTmplId=getDefaultTemplate(shiftType);if(defaultTmplId){templateMatrix[id][day]=defaultTmplId}cellTags[id][day]=["手"];validateFinal();buildSheet();updateCards();renderWarnings();hideQuickMenu()}
+function changeSelectedShift(shiftType){if(!selectedCell)return;const id=selectedCell.dataset.staffId;const day=Number(selectedCell.dataset.day);shiftMatrix[id][day]=shiftType;const defaultTmplId=getDefaultTemplate(shiftType);if(defaultTmplId){templateMatrix[id][day]=defaultTmplId}cellTags[id][day]=["手"];validateFinal();buildSheet();updateCards();renderWarnings();saveWorkData();hideQuickMenu()}
 
 function changePreset(presetName){
   currentPreset=presetName;
@@ -903,6 +905,7 @@ function changePreset(presetName){
   } else {
     buildSheet();
   }
+  saveWorkData();
 }
 
 function downloadCsv(){const header=["社員番号","氏名","区分",...days.map(d=>`${monthDayLabel(d)}`),...days.map(d=>`${monthDayLabel(d)}(時刻)`)];const lines=[header.join(",")];staffList.forEach(st=>{const shiftCells=days.map(day=>{const tmplId=templateMatrix[st.id]&&templateMatrix[st.id][day]?templateMatrix[st.id][day]:getDefaultTemplate(shiftMatrix[st.id][day]);const tmpl=shiftTemplates[tmplId];if(tmpl){return`${shiftDefs[shiftMatrix[st.id][day]]?.label||""}`}else{return shiftDefs[shiftMatrix[st.id][day]]?.label||""}});const timeCells=days.map(day=>{const tmplId=templateMatrix[st.id]&&templateMatrix[st.id][day]?templateMatrix[st.id][day]:getDefaultTemplate(shiftMatrix[st.id][day]);const tmpl=shiftTemplates[tmplId];if(tmpl){return`${tmpl.start}-${tmpl.end}`}else{return""}});lines.push([st.id,st.name,st.role,...shiftCells,...timeCells].join(","))});const blob=new Blob(["\uFEFF"+lines.join("\n")],{type:"text/csv;charset=utf-8;"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="shift_"+planMonthKey()+".csv";a.click();URL.revokeObjectURL(url)}
@@ -1213,6 +1216,7 @@ function updateDailyRequirement(day,field,value){
   
   requirements=buildReq();
   renderDailyRequirements();
+  saveWorkData();
 }
 
 // ── スタッフ設定を更新
@@ -1234,6 +1238,7 @@ function updateStaffSetting(staffId,field,value){
       st.id=newId;
       buildSheet();// セルの dataset.staffId を新IDで再構築
       renderStaffSettings();
+      saveWorkData();
     }
   }
   else if(field==="name")st.name=value;
@@ -1254,6 +1259,69 @@ function updateStaffSetting(staffId,field,value){
   else if(field==="target")st.target=value;
   else if(field==="pref")st.pref=value;
   else if(field==="note")st.note=value;
+  saveWorkData();
+}
+
+// ════════════════════════════════════════════════════════════
+// 作業データの自動保存・復元【v5.1】
+// スタッフ設定・希望データ・提出状況・対象月・生成済みシフトを
+// localStorage に保存し、リロード・ブラウザ再起動後も復元する。
+// JSON保存/読込ボタンは「バックアップ・PC間の持ち運び用」として併存。
+// ════════════════════════════════════════════════════════════
+const WORK_STORAGE_KEY="shiftDemoWorkData_v1";
+
+function saveWorkData(){
+  try{
+    localStorage.setItem(WORK_STORAGE_KEY,JSON.stringify({
+      schemaVersion:1,
+      savedAt:new Date().toLocaleString("ja-JP"),
+      planYear:PLAN_YEAR,planMonth:PLAN_MONTH,
+      currentPreset:currentPreset,
+      staffList:staffList,
+      requestMap:requestMap,
+      submissionLog:submissionLog,
+      dailyEventTypes:dailyEventTypes,
+      dailyRequirementOverrides:dailyRequirementOverrides,
+      shiftMatrix:shiftMatrix,
+      templateMatrix:templateMatrix,
+      cellTags:cellTags,
+      generated:generated
+    }));
+    const el=document.getElementById("autosaveStatus");
+    if(el)el.textContent="✓ 自動保存 "+new Date().toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"});
+  }catch(e){
+    const el=document.getElementById("autosaveStatus");
+    if(el)el.textContent="⚠ 自動保存できません（JSON保存でバックアップしてください）";
+  }
+}
+function loadWorkData(){
+  try{
+    const raw=localStorage.getItem(WORK_STORAGE_KEY);
+    if(!raw)return false;
+    const d=JSON.parse(raw);
+    if(d.schemaVersion!==1)return false;
+    if(!Array.isArray(d.staffList)||d.staffList.length===0)return false;
+    if(Number.isInteger(d.planYear)&&Number.isInteger(d.planMonth)&&d.planMonth>=0&&d.planMonth<=11){
+      PLAN_YEAR=d.planYear;PLAN_MONTH=d.planMonth;days=buildDays();
+    }
+    staffList=d.staffList;normalizeStaffList();
+    if(d.requestMap&&typeof d.requestMap==="object")requestMap=d.requestMap;
+    if(d.submissionLog&&typeof d.submissionLog==="object")submissionLog=d.submissionLog;
+    if(d.dailyEventTypes&&typeof d.dailyEventTypes==="object")dailyEventTypes=d.dailyEventTypes;
+    if(d.dailyRequirementOverrides&&typeof d.dailyRequirementOverrides==="object")dailyRequirementOverrides=d.dailyRequirementOverrides;
+    if(typeof d.currentPreset==="string"&&PRESETS[d.currentPreset])currentPreset=d.currentPreset;
+    if(d.shiftMatrix&&typeof d.shiftMatrix==="object"&&d.templateMatrix&&d.cellTags){
+      shiftMatrix=d.shiftMatrix;templateMatrix=d.templateMatrix;cellTags=d.cellTags;
+      generated=!!d.generated;
+    }
+    requirements=buildReq();// 復元した月・種別・プリセットで必要人数を再計算（この関数単体で整合が取れる状態にする）
+    return true;
+  }catch(e){return false}
+}
+function resetWorkData(){
+  if(!confirm("保存されている作業データ（スタッフ設定・希望データ・提出状況・生成済みシフト・対象月）をすべて消去し、初期デモ状態に戻します。\nこの操作は取り消せません。必要なら先に「店舗マスタJSON保存」「希望データJSON保存」でバックアップしてください。\nよろしいですか？"))return;
+  try{localStorage.removeItem(WORK_STORAGE_KEY)}catch(e){}
+  location.reload();
 }
 
 // ════════════════════════════════════════════════════════════
@@ -1318,6 +1386,7 @@ function importSubmissionCodes(){
     renderSubmissionStatus();
     renderRequestPreview();
     if(generated)noticeRegenerate("希望データ");
+    saveWorkData();
   }
 }
 
@@ -1411,6 +1480,7 @@ function commitManualEntry(){
   renderSubmissionStatus();
   renderRequestPreview();
   if(generated)noticeRegenerate("希望データ");
+  saveWorkData();
 }
 function renderManualEntry(){
   const panel=document.getElementById("manualEntryPanel");
@@ -1491,6 +1561,7 @@ function changePlanMonth(val){
   renderDailyRequirements();
   if(typeof renderSubmissionStatus==="function")renderSubmissionStatus();
   document.getElementById("warningList").innerHTML='<li><strong style="color:var(--accent);">対象月を '+planMonthLabel()+' に変更しました。希望提出を取込後、「仮シフトを自動生成」を実行してください。</strong></li>';
+  saveWorkData();
 }
 function updatePlanMonthUI(){
   const el=document.getElementById("headerMonthLabel");
@@ -1557,6 +1628,7 @@ function noticeRegenerate(what){
 function afterEventTypeSettingsChanged(what){
   requirements=buildReq();
   saveLocalSettings();
+  saveWorkData();// dailyEventTypes（作業データ側）も変わるため
   renderEventTypeSettings();
   renderDailyRequirements();
   buildSheet();
@@ -1565,6 +1637,7 @@ function afterEventTypeSettingsChanged(what){
 function afterTemplateSettingsChanged(what){
   normalizeShiftTemplates();
   saveLocalSettings();
+  saveWorkData();// テンプレ削除時の templateMatrix 付け替えを保存
   renderShiftTemplateSettings();
   buildSheet();
   if(generated){validateFinal();updateCards();renderWarnings();noticeRegenerate(what||"勤務テンプレート設定")}
@@ -1813,16 +1886,30 @@ function changeSelectedTemplate(tmplId){
   if(!isWork(shiftMatrix[id][day]))return;
   templateMatrix[id][day]=tmplId;
   addTag(id,day,"手");
-  validateFinal();buildSheet();updateCards();renderWarnings();hideQuickMenu();
+  validateFinal();buildSheet();updateCards();renderWarnings();saveWorkData();hideQuickMenu();
 }
 
 
 loadLocalSettings();// 保存済みのイベント種別・勤務テンプレート設定を復元【機能追加】
 normalizeShiftTemplates();
+const __workRestored=loadWorkData();// 前回の作業データ（スタッフ・希望・シフト・対象月）を復元【v5.1】
 requirements=buildReq();// 復元した設定で必要人数を再計算
 document.getElementById("presetSelect").value=currentPreset;
 document.getElementById("currentPresetDisplay").textContent="現在："+currentPreset;
-initMatrix();initTemplateMatrix();applyFixed();buildSheet();updateCardsBlank();
+if(__workRestored&&generated){
+  // 生成済みシフトごと復元
+  validateFinal();buildSheet();updateCards();renderWarnings();
+  const wl=document.getElementById("warningList");
+  wl.innerHTML='<li><strong style="color:var(--accent);">前回の作業データを復元しました（生成済みシフトあり）。続きから作業できます。</strong></li>'+wl.innerHTML;
+}else{
+  if(!(__workRestored&&shiftMatrix&&Object.keys(shiftMatrix).length>0)){
+    initMatrix();initTemplateMatrix();
+  }
+  applyFixed();buildSheet();updateCardsBlank();
+  if(__workRestored){
+    document.getElementById("warningList").innerHTML='<li><strong style="color:var(--accent);">前回の作業データを復元しました（シフトは未生成）。</strong></li>';
+  }
+}
 renderStaffSettings();
 renderDailyRequirements();
 renderEventTypeSettings();
@@ -1949,6 +2036,7 @@ function loadShiftRequestsJsonFromFile(file){
         submissionLog=json.submissionLog;
       }
       renderSubmissionStatus();
+      saveWorkData();
       
       // renderRequestPreview() を実行して、希望確認表示を行う
       renderRequestPreview();
@@ -1976,6 +2064,7 @@ function refreshAfterJsonLoad(){
   renderDailyRequirements();
   renderEventTypeSettings();
   renderShiftTemplateSettings();
+  saveWorkData();
 }
 
 function handleStoreMasterFile(file){
@@ -2067,6 +2156,7 @@ function clearShiftRequests(){
   renderSubmissionStatus();
   // renderRequestPreview() を実行
   renderRequestPreview();
+  saveWorkData();
   
   alert("希望データをクリアしました。");
 }
